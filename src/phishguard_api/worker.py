@@ -89,11 +89,18 @@ async def process_job(session: AsyncSession, job: Job):
                 await session.commit()
                 
                 print(f"Worker: Polling SandboxTask para {action}...", flush=True)
-                # Polling esperando al sandbox manager
+                # Polling esperando al sandbox manager (con timeout de 15s)
+                polling_counter = 0
                 while True:
                     await asyncio.sleep(1)
+                    polling_counter += 1
                     await session.refresh(sandbox_task)
                     if sandbox_task.status in (JobStatus.COMPLETED, JobStatus.FAILED):
+                        break
+                    if polling_counter >= 35:
+                        sandbox_task.status = JobStatus.FAILED
+                        sandbox_task.error = "Timeout esperando al sandbox_manager"
+                        await session.commit()
                         break
                         
                 if sandbox_task.status == JobStatus.FAILED:
@@ -101,7 +108,13 @@ async def process_job(session: AsyncSession, job: Job):
                         job_id=job.id, step=action, event_type="error",
                         details={"msg": sandbox_task.error or "Error en sandbox"}
                     ))
-                    decision = "uncertain"
+                    # Fail-Safe inteligente: usar la probabilidad acumulada en lugar de claudicar en 'uncertain'
+                    if probability >= 0.50:
+                        decision = "phishing"
+                    elif probability <= 0.35:
+                        decision = "legitimate"
+                    else:
+                        decision = "uncertain"
                     break
                     
                 # Acumular features (M4)

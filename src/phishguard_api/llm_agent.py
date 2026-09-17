@@ -3,6 +3,9 @@ import json
 import re
 import requests
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
 
 async def analyze_phishing_with_llm(url: str, html_bytes: bytes) -> float:
     """Envía la URL y el texto al LLM para determinar probabilidad de phishing. Intenta Gemini primero y luego Groq."""
@@ -37,22 +40,25 @@ Donde probability es un float del 0.0 (seguro) al 1.0 (phishing)."""
         if not gemini_key:
             return None
             
-        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={gemini_key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
-        try:
-            print("Intentando inferencia con Gemini...", flush=True)
-            response = requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
-            if response.status_code != 200:
-                print(f"Error Gemini API: {response.text}", flush=True)
-                return None
-            data = response.json()
-            text_response = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
-            text_clean = text_response.strip().strip('`').replace('json\n', '')
-            return json.loads(text_clean)
-        except Exception as e:
-            print(f"Excepción en Gemini: {e}", flush=True)
-            return None
+        for model in ["gemini-2.5-flash", "gemini-3.5-flash-lite"]:
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+            try:
+                print(f"Intentando inferencia con Gemini ({model})...", flush=True)
+                response = requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=20)
+                if response.status_code == 200:
+                    data = response.json()
+                    text_response = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
+                    text_clean = re.sub(r"^```json\s*|^```\s*|```$", "", text_response.strip(), flags=re.MULTILINE).strip()
+                    parsed = json.loads(text_clean)
+                    print(f"Gemini ({model}) respondió exitosamente: {parsed}", flush=True)
+                    return parsed
+                else:
+                    print(f"Gemini ({model}) retornó status {response.status_code}: {response.text[:120]}", flush=True)
+            except Exception as e:
+                print(f"Excepción en Gemini ({model}): {e}", flush=True)
+        return None
 
     def fetch_groq():
         groq_key = os.environ.get("GROQ_API_KEY")
