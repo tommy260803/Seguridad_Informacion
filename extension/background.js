@@ -40,7 +40,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return; // Solo procesar la ventana principal
   const url = details.url;
-  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return;
+  if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) return;
 
   // 1. FAST-PASS: Lista blanca global de sitios masivos (Cero segundos de espera)
   const GLOBAL_SAFE_DOMAINS = [

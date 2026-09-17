@@ -11,7 +11,13 @@ const DEFAULT_ENDPOINT = "http://localhost:8080/analyses";
 async function pollAnalysis() {
   chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT }).then(async ({ endpoint }) => {
     try {
+      let attempts = 0;
       while (true) {
+        if (++attempts > 15) {
+          console.warn("Tiempo de espera agotado, continuando navegación.");
+          window.location.replace(targetUrl);
+          break;
+        }
         const response = await fetch(`${endpoint}/${jobId}`);
         if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
         const data = await response.json();
