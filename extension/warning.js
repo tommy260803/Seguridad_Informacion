@@ -251,6 +251,120 @@ if (jobId) {
           .catch(err => {
             console.error('Error al solicitar captura de pantalla:', err);
           });
+
+        // 7. Análisis Contextual en Profundidad y Escenarios de Riesgo
+        const purposeEl = document.getElementById('page-purpose-text');
+        const scenariosGrid = document.getElementById('scenarios-grid');
+
+        const brand = (llmDetails && llmDetails.brand_spoofed && llmDetails.brand_spoofed !== 'Desconocida') 
+          ? llmDetails.brand_spoofed 
+          : 'la entidad suplantada';
+
+        // 7.1 Propósito detectado de la página
+        if (llmDetails && llmDetails.page_purpose) {
+          purposeEl.textContent = llmDetails.page_purpose;
+        } else if (llmDetails && llmDetails.reason) {
+          purposeEl.textContent = `Este portal simula ser una interfaz de ${brand} diseñada para captar la atención del usuario mediante pretextos de acceso, verificación o transacciones fraudulentas.`;
+        } else {
+          purposeEl.textContent = `Portal sospechoso con estructura fraudulenta orientada a la extracción no autorizada de datos personales.`;
+        }
+
+        // 7.2 Escenarios de Ataque e Impacto
+        let scenarios = [];
+        if (llmDetails && Array.isArray(llmDetails.attack_scenarios) && llmDetails.attack_scenarios.length > 0) {
+          scenarios = llmDetails.attack_scenarios;
+        } else {
+          // Escenarios contextuales inferidos según la marca o tipo de servicio
+          const brandLower = brand.toLowerCase();
+          if (brandLower.includes('face') || brandLower.includes('insta') || brandLower.includes('meta') || brandLower.includes('social') || brandLower.includes('google') || brandLower.includes('tiktok')) {
+            scenarios = [
+              {
+                title: "Secuestro Total de Cuenta",
+                desc: "Los ciberdelincuentes obtienen control de tu perfil, fotos, mensajes privados y contraseñas de acceso."
+              },
+              {
+                title: "Fraude y Extorsión a Contactos",
+                desc: "Usan tu identidad para enviar mensajes urgentes a tus amigos o familiares pidiéndoles dinero o enviando malware."
+              },
+              {
+                title: "Compromiso de Cuentas Vinculadas",
+                desc: "Intentos automatizados de acceso a otros servicios o correos donde reutilices la misma contraseña."
+              }
+            ];
+          } else if (brandLower.includes('banco') || brandLower.includes('bbva') || brandLower.includes('interbank') || brandLower.includes('bcp') || brandLower.includes('scotia') || brandLower.includes('visa') || brandLower.includes('mastercard') || brandLower.includes('pay')) {
+            scenarios = [
+              {
+                title: "Robo de Fondos y Transferencias",
+                desc: "Captura inmediata de tus claves de acceso, token digital o números de tarjeta para vaciar tu saldo."
+              },
+              {
+                title: "Clonación de Tarjetas (Carding)",
+                desc: "Extracción del número de tarjeta, fecha de vencimiento y código CVV para realizar compras online no autorizadas."
+              },
+              {
+                title: "Suplantación para Préstamos Falsos",
+                desc: "Uso de tus datos personales para solicitar créditos o abrir cuentas falsas en entidades financieras."
+              }
+            ];
+          } else if (brandLower.includes('claro') || brandLower.includes('movistar') || brandLower.includes('entel') || brandLower.includes('telecom')) {
+            scenarios = [
+              {
+                title: "Robo de Línea Móvil (SIM Swapping)",
+                desc: "Intento de obtener datos suficientes para duplicar tu chip y desviar tus SMS de autenticación bancaria."
+              },
+              {
+                title: "Exfiltración de Datos de Facturación",
+                desc: "Acceso a historiales, nombres completos, números de documento (DNI) y domicilio para extorsiones dirigidas."
+              },
+              {
+                title: "Cargos Fraudulentos en Recibo",
+                desc: "Suscripción no autorizada a servicios premium con cargo directo a la línea telefónica."
+              }
+            ];
+          } else if (brandLower.includes('marvel') || brandLower.includes('crypto') || brandLower.includes('coin') || brandLower.includes('wallet') || brandLower.includes('token') || brandLower.includes('nft') || brandLower.includes('binance') || brandLower.includes('metamask')) {
+            scenarios = [
+              {
+                title: "Drenado de Billetera (Wallet Drainer)",
+                desc: "La firma de transacciones falsas otorga permisos para vaciar automáticamente tus tokens USDT, ETH y criptomonedas."
+              },
+              {
+                title: "Pérdida Irreversible de Activos",
+                desc: "En la red blockchain las transferencias son definitivas y anónimas; los fondos no pueden ser devueltos ni cancelados."
+              },
+              {
+                title: "Compromiso de Frase Semilla",
+                desc: "Si solicitan tus 12 o 24 palabras de recuperación, los atacantes se adueñan permanentemente de tu billetera."
+              }
+            ];
+          } else {
+            scenarios = [
+              {
+                title: "Captura y Registro de Datos",
+                desc: "Cualquier texto, credencial o documento introducido en los formularios es grabado por el servidor del atacante."
+              },
+              {
+                title: "Comercialización en Mercados Ilícitos",
+                desc: "Tus datos personales pueden ser vendidos a terceros para campañas de spam, fraude y extorsión."
+              },
+              {
+                title: "Ataque en Cascada (Credential Stuffing)",
+                desc: "Pruebas masivas con robots para vulnerar tus otras cuentas utilizando la misma combinación de correo y clave."
+              }
+            ];
+          }
+        }
+
+        if (scenariosGrid) {
+          scenariosGrid.innerHTML = scenarios.map((sc, idx) => `
+            <div class="scenario-item">
+              <div class="scenario-badge">${idx + 1}</div>
+              <div class="scenario-content">
+                <span class="scenario-title">${sc.title}</span>
+                <p class="scenario-desc">${sc.desc}</p>
+              </div>
+            </div>
+          `).join('');
+        }
       })
       .catch(err => {
         console.error('Error cargando detalles del trabajo:', err);

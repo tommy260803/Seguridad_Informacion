@@ -20,7 +20,7 @@ async def analyze_phishing_with_llm(url: str, html_bytes: bytes) -> float:
     # Recortar el texto para no exceder tokens
     safe_text = text_content[:2000] if text_content else "Sin texto"
     
-    prompt = f"""Eres un analista experto en ciberseguridad. Analiza si la siguiente página es un sitio de phishing.
+    prompt = f"""Eres un analista experto en ciberseguridad. Analiza si la siguiente página es un sitio de phishing o estafa.
 URL visitada: {url}
 
 Texto extraído de la página (parcial):
@@ -29,11 +29,27 @@ Texto extraído de la página (parcial):
 Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni comillas invertidas) con esta estructura exacta:
 {{
     "probability": 1.0,
-    "brand_spoofed": "Nombre del banco o empresa suplantada (o 'Desconocida')",
-    "reason": "Breve razón técnica (ej. 'Dominio sospechoso imitando a BBVA')",
-    "recommendation": "Un consejo para el usuario (ej. 'Si recibiste este enlace por mensaje, elimínalo y repórtalo. Los bancos no solicitan contraseñas por enlaces.')"
+    "brand_spoofed": "Nombre del banco, red social o empresa suplantada (o 'Desconocida')",
+    "reason": "Breve razón técnica del engaño (ej. 'Dominio typosquatting que imita el acceso a Facebook')",
+    "page_purpose": "Explicación breve (1 a 2 frases) de qué trata este sitio según el texto extraído y qué intenta simular.",
+    "attack_scenarios": [
+        {{
+            "title": "Consecuencia 1 (ej. 'Robo de credenciales de acceso')",
+            "desc": "Qué le ocurre directamente a los datos que el usuario introduzca en los campos de esta página."
+        }},
+        {{
+            "title": "Consecuencia 2 (ej. 'Suplantación de identidad')",
+            "desc": "Cómo utilizarán los atacantes la información o la cuenta vulnerada."
+        }},
+        {{
+            "title": "Consecuencia 3 (ej. 'Ataque a cuentas vinculadas / Fraude')",
+            "desc": "Impacto colateral o riesgo financiero adicional según el tipo de servicio vulnerado."
+        }}
+    ],
+    "recommendation": "Un consejo preventivo para el usuario..."
 }}
-Donde probability es un float del 0.0 (seguro) al 1.0 (phishing)."""
+Donde probability es un float del 0.0 (seguro) al 1.0 (phishing).
+IMPORTANTE: Basa 'page_purpose' y 'attack_scenarios' estrictamente en el contenido real de la página (formulario de login, tarjeta de crédito, billetera cripto, descarga, etc.)."""
 
     def fetch_gemini():
         gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -42,7 +58,7 @@ Donde probability es un float del 0.0 (seguro) al 1.0 (phishing)."""
             
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
-        for model in ["gemini-2.5-flash", "gemini-3.5-flash-lite"]:
+        for model in ["gemini-3.5-flash-lite", "gemini-2.5-flash"]:
             endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
             try:
                 print(f"Intentando inferencia con Gemini ({model})...", flush=True)

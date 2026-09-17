@@ -385,6 +385,63 @@
       line-height: 1.4;
     }
 
+    .scenarios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .scenario-item {
+      display: flex;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      align-items: flex-start;
+      transition: all 0.2s ease;
+    }
+
+    .scenario-item:hover {
+      border-color: #cbd5e1;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .scenario-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: #fee2e2;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.15);
+    }
+
+    .scenario-content {
+      flex: 1;
+    }
+
+    .scenario-title {
+      display: block;
+      font-size: 13.5px;
+      color: #0f172a;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .scenario-desc {
+      font-size: 12.5px;
+      color: #64748b;
+      line-height: 1.45;
+      margin: 0;
+    }
+
     .rec-banner {
       background: linear-gradient(to right, #eff6ff, #f8fafc);
       border: 1px solid #bfdbfe;
@@ -532,6 +589,34 @@
         </svg>
         <div class="preview-box-title">Sitio Aislado Preventivamente</div>
         <div class="preview-box-desc">Se impidió la ejecución de scripts, cookies y formularios para salvaguardar tu seguridad antes de ingresar.</div>
+      </div>
+    </div>
+
+    <!-- Análisis en Profundidad y Escenarios de Riesgo -->
+    <div class="card" id="scenarios-card" style="margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+        <h3 style="margin-bottom: 0;">⚡ Mecánica de Ataque y Escenarios de Riesgo</h3>
+        <span class="badge badge-danger" style="font-size: 11px;">Contexto Real Extraído</span>
+      </div>
+
+      <!-- Resumen contextual de lo que trata este sitio -->
+      <div id="page-purpose-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13.5px; color: #334155; line-height: 1.5;">
+        <b style="color: #0f172a;">Propósito detectado del portal:</b> <span id="page-purpose-text">Extrayendo el propósito del portal a partir del contenido de la página...</span>
+      </div>
+
+      <!-- Subtítulo de escenarios -->
+      <div style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        <span>🎯 ¿Qué ocurriría si ingresas información o interactúas con este sitio?</span>
+      </div>
+
+      <div id="scenarios-grid" class="scenarios-grid">
+        <div class="scenario-item">
+          <div class="scenario-badge">1</div>
+          <div class="scenario-content">
+            <span class="scenario-title">Robo y Captura de Información</span>
+            <p class="scenario-desc">Evaluando los campos de entrada y formularios detectados...</p>
+          </div>
+        </div>
       </div>
     </div>
 
