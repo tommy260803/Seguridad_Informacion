@@ -113,6 +113,10 @@ async def process_job(session: AsyncSession, job: Job):
                     probability = predict_m1(accumulated_features["url"], accumulated_features["infrastructure"], probability)
                 elif action == "content":
                     probability = predict_m2(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], probability)
+                    # HEURÍSTICA: Evitar bloqueos de sitios oficiales hasta tener el modelo entrenado
+                    safe_domains = ["netflix.com", "facebook.com", "google.com", "viabcp.com", "bbva", "youtube"]
+                    if any(safe in job.url.lower() for safe in safe_domains):
+                        probability = min(probability, 0.30) # Forzar riesgo bajo
                 elif action == "visual":
                     probability = predict_m3(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], accumulated_features["visual"], probability)
                 

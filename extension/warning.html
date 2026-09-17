@@ -2,80 +2,91 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Sitio Peligroso Bloqueado</title>
+  <title>EscudoPay - Alerta de Seguridad</title>
   <style>
-    body {
-      background-color: #d32f2f;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 40px;
-      border-radius: 12px;
-    }
-    h1 {
-      margin-top: 0;
-      font-size: 2em;
-    }
-    #url-display {
-      font-weight: bold;
-      word-break: break-all;
-      background-color: rgba(255, 255, 255, 0.1);
-      padding: 10px;
-      border-radius: 6px;
-      margin: 20px 0;
-    }
-    .buttons {
-      margin-top: 30px;
-      display: flex;
-      gap: 15px;
-      justify-content: center;
-    }
-    button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 6px;
-      font-size: 1em;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s;
-    }
-    #btn-back {
-      background-color: white;
-      color: #d32f2f;
-    }
-    #btn-back:hover {
-      background-color: #f0f0f0;
-    }
-    #btn-continue {
-      background-color: transparent;
-      color: white;
-      border: 1px solid white;
-    }
-    #btn-continue:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
+    :root { --primary: #1a56db; --danger-bg: #fef2f2; --danger-text: #991b1b; --danger-icon: #dc2626; --bg-color: #f3f4f6; --card-bg: #ffffff; --text-main: #111827; --text-muted: #6b7280; --border: #e5e7eb; }
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
+    .sidebar { width: 250px; background: var(--card-bg); border-right: 1px solid var(--border); padding: 20px 0; display: flex; flex-direction: column; }
+    .logo { display: flex; align-items: center; padding: 0 20px 20px; font-size: 20px; font-weight: bold; color: var(--text-main); }
+    .logo svg { width: 24px; height: 24px; margin-right: 10px; fill: var(--primary); }
+    .nav-item { padding: 12px 20px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-weight: 500; }
+    .nav-item.active { background: #eff6ff; color: var(--primary); border-left: 3px solid var(--primary); }
+    .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; }
+    h1 { margin-top: 0; font-size: 24px; color: var(--text-main); }
+    .subtitle { color: var(--text-muted); margin-bottom: 20px; }
+    .url-bar { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-family: monospace; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .alert-banner { background: var(--danger-bg); border-radius: 12px; padding: 24px; display: flex; gap: 24px; margin-bottom: 24px; }
+    .alert-icon svg { width: 64px; height: 64px; fill: var(--danger-icon); }
+    .alert-content { flex: 1; }
+    .alert-title { font-size: 24px; font-weight: bold; color: var(--danger-text); margin: 0 0 8px 0; }
+    .alert-desc { color: var(--text-main); margin: 0 0 16px 0; line-height: 1.5; }
+    .alert-actions { display: flex; gap: 12px; }
+    .btn { padding: 10px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; font-size: 14px; }
+    .btn-danger { background: var(--danger-icon); color: white; }
+    .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-ignore { background: transparent; color: var(--primary); text-decoration: underline; border: none; cursor: pointer; font-weight: 500; }
+    .risk-meter { text-align: right; }
+    .risk-label { font-weight: bold; color: var(--danger-text); font-size: 20px; margin-bottom: 8px; }
+    .risk-bars { display: flex; gap: 4px; justify-content: flex-end; }
+    .bar { width: 16px; height: 8px; background: var(--danger-icon); border-radius: 2px; }
+    .bar.empty { background: #fca5a5; }
+    .alert-reasons { margin-top: 16px; list-style: none; padding: 0; color: var(--text-main); font-size: 14px; text-align: left;}
+    .alert-reasons li { margin-bottom: 8px; display: flex; align-items: center; justify-content: flex-end; }
+    .alert-reasons li::before { content: "🛡️"; margin-right: 8px; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-title { font-weight: bold; font-size: 16px; margin: 0 0 16px 0; }
+    .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .detail-row:last-child { border-bottom: none; }
+    .badge { background: #fee2e2; color: var(--danger-text); padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .preview-box { width: 100%; height: 200px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>¡PhishGuard bloqueó este sitio!</h1>
-    <p>Nuestros modelos de inteligencia artificial han detectado que la página a la que intentas acceder tiene una alta probabilidad de ser una web de phishing (sitio fraudulento).</p>
-    <div id="url-display">Cargando URL...</div>
-    <p>Te recomendamos encarecidamente que no visites esta página para proteger tus datos personales y credenciales.</p>
-    <div class="buttons">
-      <button id="btn-back">Volver a un lugar seguro</button>
-      <button id="btn-continue">Ignorar y continuar (Peligroso)</button>
+  <div class="sidebar">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg> 
+      EscudoPay
+    </div>
+    <a href="#" class="nav-item active">Analizar enlace</a>
+    <a href="#" class="nav-item">Reportar posible fraude</a>
+    <a href="#" class="nav-item">Historial de análisis</a>
+    <a href="#" class="nav-item">Consejos de seguridad</a>
+  </div>
+  <div class="main-content">
+    <h1>Analizar enlace</h1>
+    <div class="subtitle">Verificando enlace antes de abrirlo.</div>
+    <div class="url-bar"><span id="url-display">Cargando...</span></div>
+    <div class="alert-banner">
+      <div class="alert-icon"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>
+      <div class="alert-content">
+        <h2 class="alert-title">Enlace peligroso</h2>
+        <p class="alert-desc">Este enlace presenta múltiples señales de fraude y no corresponde a un sitio seguro oficial.<br>Te recomendamos no abrirlo ni ingresar ningún dato personal.</p>
+        <div class="alert-actions">
+          <button class="btn btn-danger" id="btn-close">No abrir enlace</button>
+          <button class="btn btn-outline">Reportar</button>
+          <button class="btn btn-ignore" id="btn-ignore">Continuar de todos modos (Añadir a excepciones)</button>
+        </div>
+      </div>
+      <div class="risk-meter">
+        <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 4px;">Nivel de riesgo</div>
+        <div class="risk-label">ALTO</div>
+        <div class="risk-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <ul class="alert-reasons"><li>Dominio sospechoso</li><li>Formularios detectados</li></ul>
+      </div>
+    </div>
+    <div class="details-grid">
+      <div class="card">
+        <h3 class="card-title">Detalles del análisis</h3>
+        <div class="detail-row"><div>🌐 Dominio</div><div><span class="badge">Sospechoso</span></div></div>
+        <div class="detail-row"><div>🔒 Certificado SSL</div><div><span class="badge">Riesgo</span></div></div>
+        <div class="detail-row"><div>📄 Contenido</div><div><span class="badge" id="content-badge">Similar a oficial</span></div></div>
+        <div class="detail-row"><div>👥 Probabilidad Phishing</div><div id="prob-value">Evaluando...</div></div>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Vista previa del sitio</h3>
+        <div class="preview-box">Bloqueado por EscudoPay</div>
+      </div>
     </div>
   </div>
   <script src="warning.js"></script>

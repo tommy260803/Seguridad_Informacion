@@ -60,7 +60,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
       const finalResult = await pollAnalysis(endpoint, job.id);
       
       if (finalResult.decision === "phishing") {
-        const warningUrl = chrome.runtime.getURL(`warning.html?url=${encodeURIComponent(url)}`);
+        const warningUrl = chrome.runtime.getURL(`warning.html?url=${encodeURIComponent(url)}&jobId=${job.id}`);
         chrome.tabs.update(details.tabId, { url: warningUrl });
       }
     }

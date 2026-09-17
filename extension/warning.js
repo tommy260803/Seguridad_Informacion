@@ -1,36 +1,40 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const targetUrl = urlParams.get('url');
+const urlParams = new URLSearchParams(window.location.search);
+const targetUrl = urlParams.get('url');
+const jobId = urlParams.get('jobId');
 
-  const urlDisplay = document.getElementById("url-display");
+if (targetUrl) {
+  document.getElementById('url-display').textContent = targetUrl;
+}
+
+document.getElementById('btn-ignore').addEventListener('click', async () => {
   if (targetUrl) {
-    urlDisplay.textContent = targetUrl;
-  } else {
-    urlDisplay.textContent = "URL desconocida";
-  }
-
-  document.getElementById("btn-back").addEventListener("click", () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.close();
-      setTimeout(() => {
-        window.location.href = "https://www.google.com";
-      }, 100);
-    }
-  });
-
-  document.getElementById("btn-continue").addEventListener("click", () => {
-    if (targetUrl) {
-      chrome.storage.local.get({ allowed_urls: [] }, (data) => {
-        const allowed = data.allowed_urls;
-        if (!allowed.includes(targetUrl)) {
-          allowed.push(targetUrl);
-        }
-        chrome.storage.local.set({ allowed_urls: allowed }, () => {
-          window.location.href = targetUrl;
-        });
+    chrome.storage.local.get({ allowed_urls: [] }).then(({ allowed_urls }) => {
+      allowed_urls.push(targetUrl);
+      chrome.storage.local.set({ allowed_urls }, () => {
+        window.location.href = targetUrl;
       });
-    }
-  });
+    });
+  }
 });
+
+// Fix for CSP: Manejar el botón de cerrar desde JS
+document.getElementById('btn-close').addEventListener('click', () => {
+  window.close();
+});
+
+// Optionally fetch job details to populate probability
+if (jobId) {
+  fetch('http://localhost:8080/analyses/' + jobId)
+    .then(res => res.json())
+    .then(data => {
+      if (data.probability !== undefined) {
+        document.getElementById('prob-value').textContent = (data.probability * 100).toFixed(1) + '%';
+        
+        // Dynamically update some values based on confidence
+        if (data.probability >= 0.8) {
+          document.getElementById('content-badge').textContent = 'Alto Riesgo Detectado';
+        }
+      }
+    }).catch(console.error);
+}
+
