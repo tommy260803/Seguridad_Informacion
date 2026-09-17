@@ -112,11 +112,18 @@ async def process_job(session: AsyncSession, job: Job):
                 if action == "infrastructure":
                     probability = predict_m1(accumulated_features["url"], accumulated_features["infrastructure"], probability)
                 elif action == "content":
-                    probability = predict_m2(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], probability)
-                    # HEURÍSTICA: Evitar bloqueos de sitios oficiales hasta tener el modelo entrenado
-                    safe_domains = ["netflix.com", "facebook.com", "google.com", "viabcp.com", "bbva", "youtube"]
-                    if any(safe in job.url.lower() for safe in safe_domains):
-                        probability = min(probability, 0.30) # Forzar riesgo bajo
+                    # Usar la probabilidad calculada por la IA Generativa (LLM) en el Sandbox
+                    llm_prob = sandbox_task.result_json.get("probability")
+                    if llm_prob is not None:
+                        probability = llm_prob
+                        print(f"Probabilidad asignada por IA Generativa: {probability}", flush=True)
+                    else:
+                        print("Advertencia: IA falló (posible límite de cuota). Usando heurística Fail-Safe.", flush=True)
+                        # Fail-Safe: Si la IA se cae, y la URL original era sospechosa (M0 > 0.5), bloqueamos por seguridad.
+                        if probability > 0.5:
+                            probability = 0.99
+                        else:
+                            probability = predict_m2(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], probability)
                 elif action == "visual":
                     probability = predict_m3(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], accumulated_features["visual"], probability)
                 

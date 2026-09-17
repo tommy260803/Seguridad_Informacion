@@ -42,10 +42,32 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   const url = details.url;
   if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return;
 
-  const { endpoint, allowed_urls } = await chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT, allowed_urls: [] });
+  // 1. FAST-PASS: Lista blanca global de sitios masivos (Cero segundos de espera)
+  const GLOBAL_SAFE_DOMAINS = [
+    "youtube.com", "google.com", "facebook.com", "github.com", 
+    "whatsapp.com", "netflix.com", "instagram.com", "twitter.com",
+    "x.com", "linkedin.com", "viabcp.com", "bbva.pe", "tiktok.com"
+  ];
+  try {
+    const urlObj = new URL(url);
+    if (GLOBAL_SAFE_DOMAINS.some(domain => urlObj.hostname.endsWith(domain))) {
+      return; // Dejar pasar instantáneamente
+    }
+  } catch(e) {}
 
-  if (allowed_urls && allowed_urls.includes(url)) {
+  const { endpoint, allowed_urls, safe_url_redirecting } = await chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT, allowed_urls: [], safe_url_redirecting: {} });
+
+  // 2. FAST-PASS LOCAL: Sitios que la IA ya aprobó o el usuario permitió
+  if (allowed_urls && allowed_urls.some(allowed => url.startsWith(allowed))) {
     return;
+  }
+
+  // Prevenir bucle infinito si acabamos de validar que es seguro
+  const now = Date.now();
+  if (safe_url_redirecting && safe_url_redirecting[url]) {
+     if (now - safe_url_redirecting[url] < 5000) { // válido por 5 segundos
+        return; 
+     }
   }
 
   try {
@@ -57,12 +79,9 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     
     if (startRes.ok) {
       const job = await startRes.json();
-      const finalResult = await pollAnalysis(endpoint, job.id);
-      
-      if (finalResult.decision === "phishing") {
-        const warningUrl = chrome.runtime.getURL(`warning.html?url=${encodeURIComponent(url)}&jobId=${job.id}`);
-        chrome.tabs.update(details.tabId, { url: warningUrl });
-      }
+      // INTERCEPTAR INSTANTANEAMENTE A LA SALA DE ESPERA
+      const analyzingUrl = chrome.runtime.getURL(`analyzing.html?url=${encodeURIComponent(url)}&jobId=${job.id}`);
+      chrome.tabs.update(details.tabId, { url: analyzingUrl });
     }
   } catch (error) {
     console.error("Error validando URL en background:", error);

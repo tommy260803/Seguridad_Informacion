@@ -56,7 +56,11 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask):
             if task.modality == "content":
                 content_res = analyze_html(html_bytes, task.url)
                 features = content_res.features
-                probability = 0.5 # Mock hasta tener modelo cargado
+                
+                # INTEGRACIÓN LLM (Generative AI)
+                from phishguard_api.llm_agent import analyze_phishing_with_llm
+                probability = await analyze_phishing_with_llm(task.url, html_bytes)
+                print(f"Decisión del LLM para {task.url}: {probability}")
                 
             elif task.modality == "visual":
                 from phishguard_visual.analyzer import analyze_screenshot
