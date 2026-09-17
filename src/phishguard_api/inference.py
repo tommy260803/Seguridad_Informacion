@@ -41,7 +41,13 @@ def _extract_url_base_features(url: str) -> Dict[str, float]:
         raise ValueError("PSL no está cargado")
     canonical = canonicalize_url(url, psl=registry.psl)
     context = UrlFeatureContext(canonical_url=canonical.value, registered_domain=canonical.registered_domain)
-    return extract_url_features(context)
+    features = extract_url_features(context)
+    # Descontar prefijo 'www.' para no penalizar dominios web estándar
+    host_labels = canonical.value.split("://", 1)[-1].split("/", 1)[0].split(":")[0].split(".")
+    if len(host_labels) > 2 and host_labels[0].lower() == "www":
+        features["subdomain_count"] = max(0.0, features["subdomain_count"] - 1.0)
+        features["host_label_count"] = max(2.0, features["host_label_count"] - 1.0)
+    return features
 
 def predict_m0(url: str) -> float:
     """Extrae características de la URL y predice con M0"""
@@ -52,10 +58,7 @@ def predict_m0(url: str) -> float:
     feature_array = np.array([[features[name] for name in feature_names]])
     model = registry.m0_model["model"]
     prob = float(model.predict_proba(feature_array)[0][1])
-    
-    # HEURÍSTICA: Suavizar la confianza de M0 para que NUNCA decida por sí solo
-    # y siempre deba consultar a M1/M2/M3, evitando bloqueos erróneos por sesgos de URL.
-    return min(0.80, max(0.20, prob))
+    return prob
 
 def predict_m1(url_features: Dict[str, float], infra_features: Dict[str, float], prev_prob: float) -> float:
     """M4: Concatenación URL + Infra"""
