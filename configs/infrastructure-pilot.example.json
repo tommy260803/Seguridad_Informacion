@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "pilot_version": "infrastructure-pilot-0.1.0",
+  "split": "conventional",
+  "sample_size": 24,
+  "seed": 20260916,
+  "partitions": ["train", "validation"],
+  "labels": ["legitimate", "phishing"],
+  "url_origins": ["reported_url", "constructed_from_domain"],
+  "max_per_registered_domain": 1,
+  "delay_seconds": 1.0
+}

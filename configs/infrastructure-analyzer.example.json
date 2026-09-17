@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "analyzer_version": "infrastructure-0.1.0",
+  "allowed_ports": {
+    "http": [80],
+    "https": [443]
+  },
+  "connect_timeout_seconds": 8.0,
+  "read_timeout_seconds": 8.0,
+  "max_redirects": 5,
+  "max_url_length": 8192,
+  "max_location_length": 8192,
+  "max_recorded_header_value_length": 512,
+  "user_agent": "phishing-research-infrastructure/0.1",
+  "inspect_certificate_after_verification_failure": true,
+  "require_sandbox_marker": true,
+  "require_egress_proxy": true,
+  "egress_proxy_url": "http://egress-proxy:3128"
+}

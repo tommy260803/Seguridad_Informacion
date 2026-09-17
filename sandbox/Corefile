@@ -1,0 +1,10 @@
+.:53 {
+    errors
+    cache 30
+    forward . 1.1.1.1 1.0.0.1 {
+        policy sequential
+        expire 10s
+        max_concurrent 100
+    }
+}
+

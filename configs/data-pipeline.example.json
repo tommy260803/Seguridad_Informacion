@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "dataset_version": "0.1.0",
+  "seed": 20260916,
+  "paths": {
+    "raw_dir": "data/raw",
+    "processed_dir": "data/processed"
+  },
+  "acquisition": {
+    "user_agent": "phishing-research-prototype/0.1",
+    "timeout_seconds": 60,
+    "max_download_bytes": 268435456,
+    "sources": [
+      {
+        "name": "phishtank",
+        "url": "https://data.phishtank.com/data/online-valid.csv.bz2",
+        "filename": "phishtank.csv.bz2",
+        "terms_url": "https://phishtank.org/terms.php",
+        "version_hint": "online-valid feed at acquisition time"
+      },
+      {
+        "name": "tranco",
+        "url": "https://tranco-list.eu/top-1m.csv.zip",
+        "filename": "tranco.csv.zip",
+        "terms_url": "https://tranco-list.eu/",
+        "version_hint": "daily standard list",
+        "version_url": "https://tranco-list.eu/top-1m-id"
+      },
+      {
+        "name": "public_suffix_list",
+        "url": "https://publicsuffix.org/list/public_suffix_list.dat",
+        "filename": "public_suffix_list.dat",
+        "terms_url": "https://publicsuffix.org/list/",
+        "version_hint": "snapshot at acquisition time"
+      }
+    ]
+  },
+  "build": {
+    "phishtank_filename": "phishtank.csv.bz2",
+    "tranco_filename": "tranco.csv.zip",
+    "public_suffix_list_filename": "public_suffix_list.dat",
+    "tranco_limit": 100000,
+    "allowed_schemes": ["http", "https"],
+    "max_url_length": 8192,
+    "minimum_temporal_span_days": 30,
+    "split_ratios": {
+      "train": 0.7,
+      "validation": 0.15,
+      "test": 0.15
+    }
+  }
+}

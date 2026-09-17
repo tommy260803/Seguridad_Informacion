@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+build/
+dist/
+*.egg-info/
+
+# Downloaded and derived research data may contain live or sensitive URLs.
+data/raw/
+data/processed/
+data/cache/
+artifacts/
+sandbox/target-url.txt

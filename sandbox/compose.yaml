@@ -1,0 +1,181 @@
+name: phishguard-infra
+
+services:
+  dns-resolver:
+    image: coredns/coredns:1.14.7@sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
+    user: "65532:65532"
+    command:
+      - -conf
+      - /etc/coredns/Corefile
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 64m
+    cpus: 0.25
+    volumes:
+      - ./Corefile:/etc/coredns/Corefile:ro
+    networks:
+      sandbox_internal:
+        ipv4_address: 172.30.0.3
+      egress_public: {}
+    restart: "no"
+
+  egress-proxy:
+    image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
+    user: "13:13"
+    entrypoint:
+      - /usr/sbin/squid
+      - -f
+      - /etc/squid/squid.conf
+      - -NYC
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: 0.50
+    tmpfs:
+      - /run:size=8m,noexec,nosuid,nodev
+      - /tmp:size=16m,noexec,nosuid,nodev
+      - /var/log/squid:size=16m,noexec,nosuid,nodev
+      - /var/spool/squid:size=16m,noexec,nosuid,nodev
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      sandbox_internal:
+        ipv4_address: 172.30.0.2
+      egress_public: {}
+    restart: "no"
+
+  infrastructure-worker:
+    build:
+      context: ..
+      dockerfile: sandbox/worker.Dockerfile
+    depends_on:
+      - dns-resolver
+      - egress-proxy
+    read_only: true
+    user: "65532:65532"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 0.50
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    environment:
+      PHISHGUARD_SANDBOX: "1"
+    dns:
+      - 172.30.0.3
+    dns_opt:
+      - timeout:1
+      - attempts:2
+    volumes:
+      - type: bind
+        source: ../configs/infrastructure-analyzer.example.json
+        target: /run/config/analyzer.json
+        read_only: true
+      - type: bind
+        source: ${PSL_PATH:?Set PSL_PATH to the versioned public_suffix_list.dat}
+        target: /run/input/public_suffix_list.dat
+        read_only: true
+      - type: bind
+        source: ${TARGET_URL_FILE:?Set TARGET_URL_FILE to a one-line URL file}
+        target: /run/input/target-url.txt
+        read_only: true
+      - type: bind
+        source: ${OUTPUT_DIR:-../artifacts/infra-pilot}
+        target: /run/output
+    command:
+      - --config
+      - /run/config/analyzer.json
+      - --psl
+      - /run/input/public_suffix_list.dat
+      - --url-file
+      - /run/input/target-url.txt
+      - --output
+      - /run/output/result.json
+    networks:
+      sandbox_internal: {}
+    restart: "no"
+
+  infrastructure-pilot:
+    build:
+      context: ..
+      dockerfile: sandbox/worker.Dockerfile
+    depends_on:
+      - dns-resolver
+      - egress-proxy
+    entrypoint:
+      - python
+      - -m
+      - phishguard_infra.batch_cli
+    read_only: true
+    user: "65532:65532"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 32
+    mem_limit: 256m
+    cpus: 0.50
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    environment:
+      PHISHGUARD_SANDBOX: "1"
+    dns:
+      - 172.30.0.3
+    dns_opt:
+      - timeout:1
+      - attempts:2
+    volumes:
+      - type: bind
+        source: ../configs/infrastructure-analyzer.example.json
+        target: /run/config/analyzer.json
+        read_only: true
+      - type: bind
+        source: ../configs/infrastructure-pilot.example.json
+        target: /run/config/pilot.json
+        read_only: true
+      - type: bind
+        source: ${PSL_PATH:?Set PSL_PATH to the versioned public_suffix_list.dat}
+        target: /run/input/public_suffix_list.dat
+        read_only: true
+      - type: bind
+        source: ${DATASET_PATH:?Set DATASET_PATH to the processed dataset directory}
+        target: /run/input/dataset
+        read_only: true
+      - type: bind
+        source: ${PILOT_OUTPUT_DIR:-../artifacts/infrastructure-pilot-0.1.0}
+        target: /run/output
+    command:
+      - --pilot-config
+      - /run/config/pilot.json
+      - --analyzer-config
+      - /run/config/analyzer.json
+      - --psl
+      - /run/input/public_suffix_list.dat
+      - --dataset
+      - /run/input/dataset
+      - --output
+      - /run/output
+    networks:
+      sandbox_internal: {}
+    restart: "no"
+
+networks:
+  sandbox_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  egress_public: {}

@@ -1,0 +1,7 @@
+// Minimal synthetic PSL for tests.
+com
+org
+net
+co.uk
+*.ck
+!www.ck

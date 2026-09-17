@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "PhishGuard Research",
+  "version": "0.1.0",
+  "description": "Cliente experimental para consultar análisis seguro de URLs.",
+  "permissions": ["activeTab", "storage", "webNavigation", "tabs"],
+  "host_permissions": ["http://localhost:8080/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_popup": "popup.html", "default_title": "PhishGuard"}
+}

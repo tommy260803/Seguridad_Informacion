@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: phishguard_db
+    environment:
+      POSTGRES_USER: phishguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: phishguard_db
+    ports:
+      - "127.0.0.1:5433:5432" # Solo loopback, mapeado al 5433 por si el 5432 está ocupado
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phishguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phishguard_api
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8000" # Mapeado al 8080 por conflicto
+    command: ["uvicorn", "phishguard_api.server:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "src"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://phishguard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/phishguard_db
+    volumes:
+      - ./src:/app/src
+      - ./extension:/app/extension # Temporal para servir archivos si es necesario
+      - ./artifacts:/app/artifacts # Modelos entrenados
+      - ./data:/app/data # Listas (PSL) y datos
+
+  sandbox_manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phishguard_sandbox_manager
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "-m", "phishguard_api.sandbox_manager"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://phishguard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/phishguard_db
+    volumes:
+      - ./src:/app/src
+      - /var/run/docker.sock:/var/run/docker.sock # Acceso estricto solo para el manager
+
+volumes:
+  pgdata:

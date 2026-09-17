@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import argparse
+from typing import Any
+import uuid
+
+from contextlib import asynccontextmanager
+import asyncio
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from phishguard_api.database import engine, get_db
+from phishguard_api.models import Base, Job, Analysis, Event
+from phishguard_api.worker import worker_loop
+
+worker_task = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global worker_task
+    # Inicialización de la base de datos (crear tablas)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    # Iniciar el worker en segundo plano
+    worker_task = asyncio.create_task(worker_loop())
+    yield
+    
+    # Limpieza al apagar
+    if worker_task:
+        worker_task.cancel()
+
+app = FastAPI(
+    title="PhishGuard API", 
+    description="Plataforma científica local para análisis de Phishing",
+    lifespan=lifespan
+)
+
+# Seguridad: Restringir orígenes según el plan
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # TODO: Restringir al ID de la extensión Chrome en producción
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+class AnalyzeRequest(BaseModel):
+    url: str
+
+@app.get("/health")
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+# Endpoint legacy temporal (Será eliminado cuando la extensión se adapte al asíncrono)
+@app.post("/analyze")
+async def analyze_legacy(req: AnalyzeRequest) -> dict[str, Any]:
+    return {
+        "status": "success",
+        "decision": "uncertain",
+        "probability_phishing": 0.5,
+        "evidence_summary": [{"source": "system", "feature": "migration", "value": "Legacy endpoint active"}],
+        "mode": "legacy-compatibility"
+    }
+
+# NUEVOS ENDPOINTS CIENTÍFICOS
+@app.post("/analyses", status_code=202)
+async def submit_analysis(req: AnalyzeRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """Crea un trabajo de análisis en la cola persistente (PostgreSQL)"""
+    url = req.url.strip()
+    if not url or len(url) > 8192:
+        raise HTTPException(status_code=400, detail="URL inválida")
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail="Only HTTP/HTTPS schemes are allowed")
+        
+    job = Job(url=url)
+    db.add(job)
+    await db.commit()
+    return {"id": str(job.id), "status": job.status.value}
+
+@app.get("/analyses/{job_id}")
+async def get_analysis(job_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """Consulta el estado y resultado de un análisis"""
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+        
+    response = {"id": str(job.id), "status": job.status.value, "url": job.url}
+    
+    # Obtener eventos (Trazabilidad)
+    events_result = await db.execute(select(Event).where(Event.job_id == job_id).order_by(Event.created_at))
+    events = events_result.scalars().all()
+    response["events"] = [
+        {"step": e.step, "type": e.event_type, "details": e.details, "time": e.created_at.isoformat()} 
+        for e in events
+    ]
+    
+    if job.status == "completed":
+        analysis_result = await db.execute(select(Analysis).where(Analysis.id == job_id))
+        analysis = analysis_result.scalar_one_or_none()
+        if analysis:
+            response.update({
+                "decision": analysis.decision,
+                "probability": analysis.probability,
+                "evidence": analysis.evidence_summary
+            })
+    return response
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def serve_dashboard():
+    html_path = Path(__file__).parent / "dashboard.html"
+    if not html_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard UI not found")
+    return html_path.read_text(encoding="utf-8")
+
+def main() -> None:
+    import argparse
+    import uvicorn
+    parser = argparse.ArgumentParser(prog="phishapi")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+    
+    print(f"Iniciando PhishGuard FastAPI en http://{args.host}:{args.port}", flush=True)
+    uvicorn.run("phishguard_api.server:app", host=args.host, port=args.port, reload=True)
+
+if __name__ == "__main__":
+    main()

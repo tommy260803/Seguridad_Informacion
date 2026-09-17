@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PhishGuard</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <main>
+    <header><strong>PhishGuard</strong><span id="state">Listo</span></header>
+    <p id="url" class="url">Obteniendo URL...</p>
+    <section id="result" aria-live="polite"><p>Analiza la pestaña activa para consultar el backend seguro.</p></section>
+    <button id="analyze" type="button">Analizar pestaña</button>
+    <label>Endpoint <input id="endpoint" type="url" autocomplete="off"></label>
+    <button id="save" type="button" class="secondary">Guardar endpoint</button>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

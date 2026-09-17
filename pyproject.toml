@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phishguard-data"
+version = "0.1.0"
+description = "Reproducible data pipeline for adaptive phishing research"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=46,<48",
+  "joblib>=1.5,<2",
+  "numpy>=2.2,<3",
+  "Pillow>=10,<12",
+  "scikit-learn>=1.7,<1.8",
+  "threadpoolctl>=3.6,<4",
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy>=2.0",
+  "asyncpg>=0.29",
+  "docker>=7.0.0"
+]
+
+[project.scripts]
+phishdata = "phishguard_data.cli:main"
+phishbaseline = "phishguard_ml.cli:main"
+phishinfra = "phishguard_infra.cli:main"
+phishinfra-batch = "phishguard_infra.batch_cli:main"
+phishm1 = "phishguard_ml.m1_cli:main"
+phishcompare = "phishguard_ml.comparison_cli:main"
+phishm2 = "phishguard_ml.m2_cli:main"
+phishm3 = "phishguard_ml.m3_cli:main"
+phisheval = "phishguard_ml.final_evaluation_cli:main"
+phishapi = "phishguard_api.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]
