@@ -1,91 +1,107 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>EscudoPay - Alerta de Seguridad</title>
+  <title>EscudoPay - Enlace Peligroso</title>
   <style>
-    :root { --primary: #1a56db; --danger-bg: #fef2f2; --danger-text: #991b1b; --danger-icon: #dc2626; --bg-color: #f3f4f6; --card-bg: #ffffff; --text-main: #111827; --text-muted: #6b7280; --border: #e5e7eb; }
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; }
-    .sidebar { width: 250px; background: var(--card-bg); border-right: 1px solid var(--border); padding: 20px 0; display: flex; flex-direction: column; }
-    .logo { display: flex; align-items: center; padding: 0 20px 20px; font-size: 20px; font-weight: bold; color: var(--text-main); }
-    .logo svg { width: 24px; height: 24px; margin-right: 10px; fill: var(--primary); }
-    .nav-item { padding: 12px 20px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-weight: 500; }
-    .nav-item.active { background: #eff6ff; color: var(--primary); border-left: 3px solid var(--primary); }
-    .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; }
-    h1 { margin-top: 0; font-size: 24px; color: var(--text-main); }
-    .subtitle { color: var(--text-muted); margin-bottom: 20px; }
-    .url-bar { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-family: monospace; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .alert-banner { background: var(--danger-bg); border-radius: 12px; padding: 24px; display: flex; gap: 24px; margin-bottom: 24px; }
-    .alert-icon svg { width: 64px; height: 64px; fill: var(--danger-icon); }
-    .alert-content { flex: 1; }
-    .alert-title { font-size: 24px; font-weight: bold; color: var(--danger-text); margin: 0 0 8px 0; }
-    .alert-desc { color: var(--text-main); margin: 0 0 16px 0; line-height: 1.5; }
-    .alert-actions { display: flex; gap: 12px; }
-    .btn { padding: 10px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; border: none; font-size: 14px; }
-    .btn-danger { background: var(--danger-icon); color: white; }
-    .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
-    .btn-ignore { background: transparent; color: var(--primary); text-decoration: underline; border: none; cursor: pointer; font-weight: 500; }
-    .risk-meter { text-align: right; }
-    .risk-label { font-weight: bold; color: var(--danger-text); font-size: 20px; margin-bottom: 8px; }
-    .risk-bars { display: flex; gap: 4px; justify-content: flex-end; }
-    .bar { width: 16px; height: 8px; background: var(--danger-icon); border-radius: 2px; }
-    .bar.empty { background: #fca5a5; }
-    .alert-reasons { margin-top: 16px; list-style: none; padding: 0; color: var(--text-main); font-size: 14px; text-align: left;}
-    .alert-reasons li { margin-bottom: 8px; display: flex; align-items: center; justify-content: flex-end; }
-    .alert-reasons li::before { content: "🛡️"; margin-right: 8px; }
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .card-title { font-weight: bold; font-size: 16px; margin: 0 0 16px 0; }
-    .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f6fa; display: flex; height: 100vh; overflow-y: auto; justify-content: center; }
+    .main-content { width: 100%; max-width: 900px; padding: 40px 20px; box-sizing: border-box; }
+    .page-title { font-size: 24px; margin-top: 0; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; color: #1a1a1a; }
+    .page-title svg { width: 28px; height: 28px; fill: #0056b3; }
+    .page-subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+    .url-bar { background: white; padding: 12px 15px; border-radius: 8px; border: 1px solid #ddd; font-family: monospace; font-size: 14px; color: #333; margin-bottom: 20px; word-break: break-all;}
+    .warning-banner { background-color: #fdf2f2; border: 1px solid #f8d7da; border-radius: 12px; padding: 25px; display: flex; gap: 20px; margin-bottom: 20px; align-items: center; }
+    .warning-icon { width: 50px; height: 50px; background: #d32f2f; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; font-weight: bold; flex-shrink: 0; }
+    .warning-text { flex: 1; }
+    .warning-text h2 { margin: 0 0 10px 0; color: #d32f2f; font-size: 22px; }
+    .warning-text p { margin: 0 0 15px 0; color: #333; font-size: 14px; line-height: 1.5; }
+    .risk-level { text-align: right; }
+    .risk-level h3 { margin: 0 0 5px 0; color: #666; font-size: 12px; text-transform: uppercase; }
+    .risk-level .high { color: #d32f2f; font-size: 20px; font-weight: bold; margin-bottom: 10px; }
+    .btn-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: bold; }
+    .btn-red { background-color: #d32f2f; color: white; }
+    .btn-outline { background-color: white; color: #d32f2f; border: 1px solid #d32f2f; }
+    .btn-link { background: none; color: #0056b3; text-decoration: underline; padding: 0; margin-left: 10px; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e1e4e8; }
+    .card h3 { margin: 0 0 15px 0; font-size: 16px; color: #333; }
+    .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 14px; align-items: center; }
     .detail-row:last-child { border-bottom: none; }
-    .badge { background: #fee2e2; color: var(--danger-text); padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
-    .preview-box { width: 100%; height: 200px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: bold; }
+    .detail-label { color: #555; display: flex; align-items: center; gap: 8px; }
+    .detail-value { background: #fdf2f2; color: #d32f2f; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; text-align: right;}
+    .placeholder-image { background: #e9ecef; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #888; font-size: 14px; text-align: center; padding: 20px;}
+    .rec-banner { background-color: #e8f4fc; border-left: 4px solid #0056b3; padding: 15px 20px; border-radius: 0 8px 8px 0; display: flex; gap: 15px; align-items: center; }
+    .rec-icon { color: #0056b3; flex-shrink: 0; }
+    .rec-text h4 { margin: 0 0 5px 0; color: #0056b3; }
+    .rec-text p { margin: 0; color: #333; font-size: 13px; line-height: 1.5; }
+    @media (max-width: 768px) {
+      .details-grid { grid-template-columns: 1fr; }
+      .warning-banner { flex-direction: column; text-align: center; }
+      .risk-level { text-align: center; }
+    }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="logo">
-      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg> 
-      EscudoPay
-    </div>
-    <a href="#" class="nav-item active">Analizar enlace</a>
-    <a href="#" class="nav-item">Reportar posible fraude</a>
-    <a href="#" class="nav-item">Historial de análisis</a>
-    <a href="#" class="nav-item">Consejos de seguridad</a>
-  </div>
   <div class="main-content">
-    <h1>Analizar enlace</h1>
-    <div class="subtitle">Verificando enlace antes de abrirlo.</div>
-    <div class="url-bar"><span id="url-display">Cargando...</span></div>
-    <div class="alert-banner">
-      <div class="alert-icon"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>
-      <div class="alert-content">
-        <h2 class="alert-title">Enlace peligroso</h2>
-        <p class="alert-desc">Este enlace presenta múltiples señales de fraude y no corresponde a un sitio seguro oficial.<br>Te recomendamos no abrirlo ni ingresar ningún dato personal.</p>
-        <div class="alert-actions">
-          <button class="btn btn-danger" id="btn-close">No abrir enlace</button>
-          <button class="btn btn-outline">Reportar</button>
-          <button class="btn btn-ignore" id="btn-ignore">Continuar de todos modos (Añadir a excepciones)</button>
+    <h1 class="page-title">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+      EscudoPay
+    </h1>
+    <p class="page-subtitle">Verificando enlace que intentas abrir.</p>
+
+    <div class="url-bar" id="url-display">Cargando...</div>
+
+    <div class="warning-banner">
+      <div class="warning-icon">!</div>
+      <div class="warning-text">
+        <h2 id="main-title">Enlace peligroso</h2>
+        <p id="main-desc">Este enlace presenta múltiples señales de fraude y no corresponde al sitio oficial.<br>Te recomendamos no abrirlo ni ingresar ningún dato personal.</p>
+        <div class="btn-group">
+          <button class="btn btn-red" id="btn-close">Cerrar pestaña</button>
+          <button class="btn btn-link" id="btn-ignore">Continuar de todos modos (No recomendado)</button>
         </div>
       </div>
-      <div class="risk-meter">
-        <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 4px;">Nivel de riesgo</div>
-        <div class="risk-label">ALTO</div>
-        <div class="risk-bars"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-        <ul class="alert-reasons"><li>Dominio sospechoso</li><li>Formularios detectados</li></ul>
+      <div class="risk-level">
+        <h3>Nivel de riesgo</h3>
+        <div class="high" id="risk-text">ALTO</div>
       </div>
     </div>
+
     <div class="details-grid">
       <div class="card">
-        <h3 class="card-title">Detalles del análisis</h3>
-        <div class="detail-row"><div>🌐 Dominio</div><div><span class="badge">Sospechoso</span></div></div>
-        <div class="detail-row"><div>🔒 Certificado SSL</div><div><span class="badge">Riesgo</span></div></div>
-        <div class="detail-row"><div>📄 Contenido</div><div><span class="badge" id="content-badge">Similar a oficial</span></div></div>
-        <div class="detail-row"><div>👥 Probabilidad Phishing</div><div id="prob-value">Evaluando...</div></div>
+        <h3>Detalles del análisis</h3>
+        <div class="detail-row">
+          <span class="detail-label">🌐 Dominio</span>
+          <span class="detail-value">Sospechoso</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🔒 Certificado SSL</span>
+          <span class="detail-value">No válido o riesgo</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">📄 Contenido</span>
+          <span class="detail-value" id="content-badge">Alto Riesgo Detectado</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">🤖 Probabilidad Phishing</span>
+          <span class="detail-value" id="prob-value">100.0%</span>
+        </div>
       </div>
+
       <div class="card">
-        <h3 class="card-title">Vista previa del sitio</h3>
-        <div class="preview-box">Bloqueado por EscudoPay</div>
+        <h3>Vista previa del sitio</h3>
+        <div class="placeholder-image">Contenido malicioso bloqueado por protección de EscudoPay.</div>
+      </div>
+    </div>
+
+    <div class="rec-banner">
+      <div class="rec-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <div class="rec-text">
+        <h4>Recomendación de EscudoPay</h4>
+        <p id="rec-value">Procesando recomendaciones detalladas de la IA...</p>
       </div>
     </div>
   </div>

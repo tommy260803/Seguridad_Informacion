@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: postgres:16-alpine
     container_name: phishguard_db
@@ -52,6 +52,7 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     volumes:
       - ./src:/app/src
+      - ./artifacts:/app/artifacts
       - /var/run/docker.sock:/var/run/docker.sock # Acceso estricto solo para el manager
 
 volumes:

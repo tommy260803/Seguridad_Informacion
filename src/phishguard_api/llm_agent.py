@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import re
 import requests
@@ -23,7 +23,14 @@ URL visitada: {url}
 Texto extraído de la página (parcial):
 {safe_text}
 
-Responde ÚNICAMENTE con un número del 0.0 al 1.0, donde 1.0 significa que es 100% phishing seguro, y 0.0 es un sitio 100% legítimo o inofensivo. No incluyas ninguna otra palabra o explicación."""
+Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni comillas invertidas) con esta estructura exacta:
+{{
+    "probability": 1.0,
+    "brand_spoofed": "Nombre del banco o empresa suplantada (o 'Desconocida')",
+    "reason": "Breve razón técnica (ej. 'Dominio sospechoso imitando a BBVA')",
+    "recommendation": "Un consejo para el usuario (ej. 'Si recibiste este enlace por mensaje, elimínalo y repórtalo. Los bancos no solicitan contraseñas por enlaces.')"
+}}
+Donde probability es un float del 0.0 (seguro) al 1.0 (phishing)."""
 
     def fetch_gemini():
         gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -40,8 +47,9 @@ Responde ÚNICAMENTE con un número del 0.0 al 1.0, donde 1.0 significa que es 1
                 print(f"Error Gemini API: {response.text}", flush=True)
                 return None
             data = response.json()
-            text_response = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "0.5")
-            return float(text_response.strip())
+            text_response = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
+            text_clean = text_response.strip().strip('`').replace('json\n', '')
+            return json.loads(text_clean)
         except Exception as e:
             print(f"Excepción en Gemini: {e}", flush=True)
             return None
@@ -56,7 +64,7 @@ Responde ÚNICAMENTE con un número del 0.0 al 1.0, donde 1.0 significa que es 1
             "model": "llama3-70b-8192",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.0,
-            "max_tokens": 10
+            "max_tokens": 300
         }
         headers = {
             "Authorization": f"Bearer {groq_key}",
@@ -70,8 +78,9 @@ Responde ÚNICAMENTE con un número del 0.0 al 1.0, donde 1.0 significa que es 1
                 print(f"Error Groq API: {response.text}", flush=True)
                 return None
             data = response.json()
-            text_response = data.get("choices", [{}])[0].get("message", {}).get("content", "0.5")
-            return float(text_response.strip())
+            text_response = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+            text_clean = text_response.strip().strip('`').replace('json\n', '')
+            return json.loads(text_clean)
         except Exception as e:
             print(f"Excepción en Groq: {e}", flush=True)
             return None

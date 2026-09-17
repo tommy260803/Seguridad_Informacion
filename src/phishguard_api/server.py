@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 import asyncio
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.staticfiles import StaticFiles
+import os
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -48,6 +50,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+os.makedirs("/app/artifacts/screenshots", exist_ok=True)
+app.mount("/screenshots", StaticFiles(directory="/app/artifacts/screenshots"), name="screenshots")
 
 class AnalyzeRequest(BaseModel):
     url: str

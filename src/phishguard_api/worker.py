@@ -106,6 +106,9 @@ async def process_job(session: AsyncSession, job: Job):
                     
                 # Acumular features (M4)
                 new_features = sandbox_task.result_json.get("features", {})
+                llm_det = sandbox_task.result_json.get("llm_details")
+                if llm_det:
+                    new_features["llm_details"] = llm_det
                 accumulated_features[action] = new_features
                 
                 # Adaptación M4 (concatenar estado y predecir)
@@ -132,6 +135,10 @@ async def process_job(session: AsyncSession, job: Job):
                 
         print(f"Worker {job.id}: Terminado bucle adaptativo con decision {decision}", flush=True)
         # --- GUARDAR RESULTADOS ---
+        evidence = [{"source": "M0", "feature": "probability", "value": probability}]
+        if "content" in accumulated_features and "llm_details" in accumulated_features["content"]:
+            evidence.append({"source": "LLM", "details": accumulated_features["content"]["llm_details"]})
+
         analysis = Analysis(
             id=job.id,
             decision=decision,
@@ -139,7 +146,7 @@ async def process_job(session: AsyncSession, job: Job):
             confidence=confidence,
             uncertainty=uncertainty,
             modalities_consulted=consulted,
-            evidence_summary=[{"source": "M0", "feature": "probability", "value": probability}]
+            evidence_summary=evidence
         )
         session.add(analysis)
         

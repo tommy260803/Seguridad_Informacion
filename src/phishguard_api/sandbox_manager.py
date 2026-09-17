@@ -52,6 +52,12 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask):
             html_bytes = base64.b64decode(pw_result["html"])
             screenshot_bytes = base64.b64decode(pw_result["screenshot"])
             
+            # Guardar captura en artifacts para la UI
+            import os
+            os.makedirs("/app/artifacts/screenshots", exist_ok=True)
+            with open(f"/app/artifacts/screenshots/{task.job_id}.png", "wb") as f:
+                f.write(screenshot_bytes)
+            
             features = {}
             if task.modality == "content":
                 content_res = analyze_html(html_bytes, task.url)
@@ -59,7 +65,13 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask):
                 
                 # INTEGRACIÓN LLM (Generative AI)
                 from phishguard_api.llm_agent import analyze_phishing_with_llm
-                probability = await analyze_phishing_with_llm(task.url, html_bytes)
+                llm_response = await analyze_phishing_with_llm(task.url, html_bytes)
+                if isinstance(llm_response, dict):
+                    probability = llm_response.get("probability", 0.5)
+                    llm_details = llm_response
+                else:
+                    probability = llm_response
+                    llm_details = None
                 print(f"Decisión del LLM para {task.url}: {probability}")
                 
             elif task.modality == "visual":
@@ -85,7 +97,8 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask):
         task.result_json = {
             "status": "success",
             "probability": probability,
-            "features": features
+            "features": features,
+            "llm_details": locals().get("llm_details")
         }
         task.status = JobStatus.COMPLETED
         
