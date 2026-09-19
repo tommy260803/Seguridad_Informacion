@@ -354,13 +354,32 @@ if (jobId) {
           }
         }
 
+        const escapeHtml = (value) => String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+
+        // Gemini may return each scenario as plain text, while the built-in
+        // fallback uses {title, desc}. Normalize both formats for the UI.
+        const normalizedScenarios = scenarios.map((scenario, index) => {
+          if (typeof scenario === 'string') {
+            return { title: `Posible consecuencia ${index + 1}`, desc: scenario };
+          }
+          return {
+            title: scenario && scenario.title ? scenario.title : `Posible consecuencia ${index + 1}`,
+            desc: scenario && scenario.desc ? scenario.desc : 'No se proporcionaron detalles adicionales.'
+          };
+        });
+
         if (scenariosGrid) {
-          scenariosGrid.innerHTML = scenarios.map((sc, idx) => `
+          scenariosGrid.innerHTML = normalizedScenarios.map((sc, idx) => `
             <div class="scenario-item">
               <div class="scenario-badge">${idx + 1}</div>
               <div class="scenario-content">
-                <span class="scenario-title">${sc.title}</span>
-                <p class="scenario-desc">${sc.desc}</p>
+                <span class="scenario-title">${escapeHtml(sc.title)}</span>
+                <p class="scenario-desc">${escapeHtml(sc.desc)}</p>
               </div>
             </div>
           `).join('');

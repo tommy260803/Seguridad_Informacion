@@ -18,7 +18,9 @@ dependencies = [
   "uvicorn[standard]>=0.30",
   "sqlalchemy>=2.0",
   "asyncpg>=0.29",
-  "docker>=7.0.0"
+  "docker>=7.0.0",
+  "requests>=2.32,<3",
+  "python-dotenv>=1.0,<2"
 ]
 
 [project.scripts]
@@ -32,6 +34,7 @@ phishm2 = "phishguard_ml.m2_cli:main"
 phishm3 = "phishguard_ml.m3_cli:main"
 phisheval = "phishguard_ml.final_evaluation_cli:main"
 phishapi = "phishguard_api.server:main"
+phishrequeuevisual = "phishguard_api.reanalysis:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

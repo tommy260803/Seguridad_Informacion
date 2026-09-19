@@ -19,28 +19,24 @@ from sqlalchemy import select
 from phishguard_api.database import engine, get_db
 from phishguard_api.models import Base, Job, Analysis, Event
 from phishguard_api.worker import worker_loop
-from phishguard_api.sandbox_manager import manager_loop
 
 worker_task = None
-sandbox_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global worker_task, sandbox_task
+    global worker_task
     # Inicialización de la base de datos (crear tablas)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    # Iniciar el worker y el sandbox manager en segundo plano
+    # The dedicated sandbox_manager service owns browser tasks.  Starting a
+    # second manager here races it without the Docker socket or isolation.
     worker_task = asyncio.create_task(worker_loop())
-    sandbox_task = asyncio.create_task(manager_loop())
     yield
     
     # Limpieza al apagar
     if worker_task:
         worker_task.cancel()
-    if sandbox_task:
-        sandbox_task.cancel()
 
 app = FastAPI(
     title="PhishGuard API", 
@@ -63,6 +59,11 @@ os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 async def get_screenshot(filename: str, db: AsyncSession = Depends(get_db)):
     clean_id = filename.replace(".png", "")
     screenshot_file = Path(SCREENSHOTS_DIR) / f"{clean_id}.png"
+
+    # Captures are produced exclusively by sandbox_manager.  The API must not
+    # launch a browser against an untrusted URL on demand.
+    if not screenshot_file.exists():
+        raise HTTPException(status_code=404, detail="Captura aislada no disponible")
     
     if not screenshot_file.exists():
         res = await db.execute(select(Job).where(Job.id == clean_id))

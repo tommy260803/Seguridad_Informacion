@@ -1,128 +1,66 @@
-import os
-import json
-import re
-import requests
 import asyncio
+import json
+import os
+import re
+from typing import Any
+
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
-async def analyze_phishing_with_llm(url: str, html_bytes: bytes) -> float:
-    """Envía la URL y el texto al LLM para determinar probabilidad de phishing. Intenta Gemini primero y luego Groq."""
-    
-    # Extraer texto básico limpiando las etiquetas HTML
-    html_str = html_bytes.decode("utf-8", errors="ignore")
-    # Limpiar scripts y estilos rudimentariamente
-    html_str = re.sub(r"<(script|style).*?>.*?</\1>", "", html_str, flags=re.DOTALL | re.IGNORECASE)
-    text_content = re.sub(r"<[^>]+>", " ", html_str)
-    text_content = re.sub(r"\s+", " ", text_content).strip()
-    
-    # Recortar el texto para no exceder tokens
-    safe_text = text_content[:2000] if text_content else "Sin texto"
-    
-    prompt = f"""Eres un analista experto en ciberseguridad. Analiza si la siguiente página es un sitio de phishing o estafa.
-URL visitada: {url}
 
-Texto extraído de la página (parcial):
-{safe_text}
+def _parse_response(text: str) -> dict[str, Any]:
+    cleaned = re.sub(r"^```json\s*|^```\s*|```$", "", text.strip(), flags=re.MULTILINE).strip()
+    parsed = json.loads(cleaned)
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("probability"), (int, float)):
+        raise ValueError("response did not contain numeric probability")
+    parsed["probability"] = max(0.0, min(1.0, float(parsed["probability"])))
+    return parsed
 
-Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni comillas invertidas) con esta estructura exacta:
-{{
-    "probability": 1.0,
-    "brand_spoofed": "Nombre del banco, red social o empresa suplantada (o 'Desconocida')",
-    "reason": "Breve razón técnica del engaño (ej. 'Dominio typosquatting que imita el acceso a Facebook')",
-    "page_purpose": "Explicación breve (1 a 2 frases) de qué trata este sitio según el texto extraído y qué intenta simular.",
-    "attack_scenarios": [
-        {{
-            "title": "Consecuencia 1 (ej. 'Robo de credenciales de acceso')",
-            "desc": "Qué le ocurre directamente a los datos que el usuario introduzca en los campos de esta página."
-        }},
-        {{
-            "title": "Consecuencia 2 (ej. 'Suplantación de identidad')",
-            "desc": "Cómo utilizarán los atacantes la información o la cuenta vulnerada."
-        }},
-        {{
-            "title": "Consecuencia 3 (ej. 'Ataque a cuentas vinculadas / Fraude')",
-            "desc": "Impacto colateral o riesgo financiero adicional según el tipo de servicio vulnerado."
-        }}
-    ],
-    "recommendation": "Un consejo preventivo para el usuario..."
-}}
-Donde probability es un float del 0.0 (seguro) al 1.0 (phishing).
-IMPORTANTE: Basa 'page_purpose' y 'attack_scenarios' estrictamente en el contenido real de la página (formulario de login, tarjeta de crédito, billetera cripto, descarga, etc.)."""
 
-    def fetch_gemini():
-        gemini_key = os.environ.get("GEMINI_API_KEY")
-        if not gemini_key:
-            return None
-            
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        
-        for model in ["gemini-3.5-flash-lite", "gemini-2.5-flash"]:
-            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
-            try:
-                print(f"Intentando inferencia con Gemini ({model})...", flush=True)
-                response = requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=20)
-                if response.status_code == 200:
-                    data = response.json()
-                    text_response = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
-                    text_clean = re.sub(r"^```json\s*|^```\s*|```$", "", text_response.strip(), flags=re.MULTILINE).strip()
-                    parsed = json.loads(text_clean)
-                    print(f"Gemini ({model}) respondió exitosamente: {parsed}", flush=True)
-                    return parsed
-                else:
-                    print(f"Gemini ({model}) retornó status {response.status_code}: {response.text[:120]}", flush=True)
-            except Exception as e:
-                print(f"Excepción en Gemini ({model}): {e}", flush=True)
-        return None
+async def analyze_phishing_with_llm(url: str, html_bytes: bytes) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+    """Return structured LLM evidence, or a categorized error after bounded fallbacks."""
+    html = html_bytes.decode("utf-8", errors="ignore")
+    text = re.sub(r"<(script|style).*?>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()[:2000] or "Sin texto"
+    prompt = f"""Eres un analista experto en ciberseguridad. Analiza si esta pagina es phishing o estafa.
+URL: {url}
+Texto extraido: {text}
+Responde solo JSON valido con probability (float 0.0 a 1.0), brand_spoofed, reason, page_purpose, attack_scenarios y recommendation. Basa las conclusiones exclusivamente en el texto suministrado; si no hay evidencia de formularios, pagos o descargas, no los inventes."""
+    timeout = float(os.getenv("LLM_TIMEOUT_SECONDS", "10"))
+    attempts = max(1, int(os.getenv("LLM_MAX_ATTEMPTS", "2")))
 
-    def fetch_groq():
-        groq_key = os.environ.get("GROQ_API_KEY")
+    def execute() -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        gemini_errors: list[str] = []
+        if gemini_key:
+            models = [value.strip() for value in os.getenv("GEMINI_MODELS", "gemini-3.5-flash-lite,gemini-2.5-flash").split(",") if value.strip()]
+            for model in models[:attempts]:
+                try:
+                    response = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}", json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"}, timeout=timeout)
+                    if response.status_code == 200:
+                        response_text = response.json().get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "{}")
+                        return _parse_response(response_text), None
+                    kind = "quota" if response.status_code == 429 else "provider_error"
+                    gemini_errors.append(f"{model}:{kind}:{response.status_code}")
+                except Exception as exc:
+                    gemini_errors.append(f"{model}:timeout_or_invalid_response:{str(exc)[:120]}")
+        else:
+            gemini_errors.append("not_configured")
+
+        groq_key = os.getenv("GROQ_API_KEY")
         if not groq_key:
-            return None
-            
-        endpoint = "https://api.groq.com/openai/v1/chat/completions"
-        payload = {
-            "model": "llama3-70b-8192",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.0,
-            "max_tokens": 300
-        }
-        headers = {
-            "Authorization": f"Bearer {groq_key}",
-            "Content-Type": "application/json"
-        }
-        
+            return None, {"provider": "gemini", "kind": "unavailable", "message": "; ".join(gemini_errors)[:512]}
         try:
-            print("Intentando inferencia con Groq (Plan B)...", flush=True)
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", json={"model": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"), "messages": [{"role": "user", "content": prompt}], "temperature": 0.0, "max_tokens": 300}, headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}, timeout=timeout)
             if response.status_code != 200:
-                print(f"Error Groq API: {response.text}", flush=True)
-                return None
-            data = response.json()
-            text_response = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
-            text_clean = text_response.strip().strip('`').replace('json\n', '')
-            return json.loads(text_clean)
-        except Exception as e:
-            print(f"Excepción en Groq: {e}", flush=True)
-            return None
+                kind = "quota" if response.status_code == 429 else "model_unavailable" if response.status_code == 400 else "provider_error"
+                return None, {"provider": "groq", "kind": kind, "message": response.text[:512]}
+            response_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+            return _parse_response(response_text), None
+        except Exception as exc:
+            return None, {"provider": "groq", "kind": "timeout_or_invalid_response", "message": str(exc)[:512]}
 
-    def execute_models():
-        # 1. Intentar con Gemini
-        result = fetch_gemini()
-        if result is not None:
-            print(f"Gemini respondió exitosamente: {result}", flush=True)
-            return result
-            
-        # 2. Si Gemini falla (ej. Rate Limit), intentar con Groq
-        print("Gemini falló. Activando fallback a Groq...", flush=True)
-        result = fetch_groq()
-        if result is not None:
-            print(f"Groq respondió exitosamente: {result}", flush=True)
-            return result
-            
-        # 3. Si ambos fallan, devolver None para activar el Fail-Safe de worker.py
-        print("Ambos modelos de IA fallaron.", flush=True)
-        return None
-
-    return await asyncio.to_thread(execute_models)
+    return await asyncio.to_thread(execute)

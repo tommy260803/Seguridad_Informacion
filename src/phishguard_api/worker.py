@@ -1,4 +1,5 @@
 import asyncio
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from phishguard_api.models import Job, JobStatus, Analysis, Event, SandboxTask
@@ -27,6 +28,17 @@ async def process_job(session: AsyncSession, job: Job):
         print(f"Worker {job.id}: Prediciendo M0", flush=True)
         # --- ETAPA 1: URL (M0) ---
         probability = predict_m0(job.url)
+
+        retry_events = (
+            await session.execute(
+                select(Event).where(
+                    Event.job_id == job.id,
+                    Event.step == "system",
+                    Event.event_type == "reanalysis",
+                )
+            )
+        ).scalars().all()
+        force_visual = any(event.details.get("force_visual") is True for event in retry_events)
         
         session.add(Event(
             job_id=job.id, step="url", event_type="acquire",
@@ -50,6 +62,12 @@ async def process_job(session: AsyncSession, job: Job):
                 replace(policy, budget=policy.budget - spent), 
                 step=step
             )
+            if force_visual and "visual" not in consulted:
+                action, reason = "visual", "reanalysis_force_visual"
+            elif action == "decide" and probability >= 0.5 and "visual" not in consulted:
+                # Blocking decisions need an inert visual preview generated only
+                # by sandbox_manager, never by the API process.
+                action, reason = "visual", "capture_for_blocked_site"
             print(f"Worker {job.id}: Action={action} Reason={reason}", flush=True)
             
             session.add(Event(
@@ -97,7 +115,7 @@ async def process_job(session: AsyncSession, job: Job):
                     await session.refresh(sandbox_task)
                     if sandbox_task.status in (JobStatus.COMPLETED, JobStatus.FAILED):
                         break
-                    if polling_counter >= 35:
+                    if polling_counter >= int(os.environ.get("SANDBOX_TASK_TIMEOUT_SECONDS", "70")):
                         sandbox_task.status = JobStatus.FAILED
                         sandbox_task.error = "Timeout esperando al sandbox_manager"
                         await session.commit()

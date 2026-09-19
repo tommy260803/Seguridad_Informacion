@@ -2,6 +2,7 @@ const endpointInput = document.querySelector("#endpoint");
 const state = document.querySelector("#state");
 const result = document.querySelector("#result");
 const urlLabel = document.querySelector("#url");
+const forgetSiteButton = document.querySelector("#forget-site");
 
 function render(payload) {
   const decision = payload.decision || "uncertain";
@@ -23,6 +24,34 @@ chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
     chrome.runtime.sendMessage({ type: "analyze", url }, response => {
       if (!response?.ok) { state.textContent = "Error"; result.textContent = response?.error || "No se pudo consultar el backend."; return; }
       state.textContent = "Completado"; render(response.result || {});
+    });
+  };
+
+  let activeOrigin = "";
+  try {
+    activeOrigin = new URL(url).origin;
+  } catch (_) {
+    forgetSiteButton.disabled = true;
+  }
+  forgetSiteButton.onclick = () => {
+    if (!activeOrigin || !tab?.id) return;
+    chrome.storage.local.get({ allowed_urls: [], safe_url_redirecting: {} }).then(storage => {
+      const allowed_urls = (storage.allowed_urls || []).filter(item => item !== activeOrigin);
+      const safe_url_redirecting = Object.fromEntries(
+        Object.entries(storage.safe_url_redirecting || {}).filter(([savedUrl]) => {
+          try {
+            return new URL(savedUrl).origin !== activeOrigin;
+          } catch (_) {
+            return true;
+          }
+        })
+      );
+      return chrome.storage.local.set({ allowed_urls, safe_url_redirecting });
+    }).then(() => {
+      state.textContent = "Permiso borrado. Analizando...";
+      chrome.tabs.reload(tab.id);
+    }).catch(() => {
+      state.textContent = "No se pudo borrar el permiso";
     });
   };
 });

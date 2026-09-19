@@ -45,15 +45,85 @@
     depends_on:
       db:
         condition: service_healthy
+      dns-resolver:
+        condition: service_started
+      egress-proxy:
+        condition: service_started
     command: ["python", "-m", "phishguard_api.sandbox_manager"]
     environment:
       DATABASE_URL: postgresql+asyncpg://phishguard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/phishguard_db
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
+      PLAYWRIGHT_IMAGE: phishguard-playwright:local
+      BROWSER_SANDBOX_NETWORK: phishguard_browser_internal
+      BROWSER_SANDBOX_DNS: 172.31.0.3
+      BROWSER_SANDBOX_PROXY: http://egress-proxy:3128
+      BROWSER_SANDBOX_TIMEOUT_SECONDS: "20"
+      BROWSER_NAVIGATION_TIMEOUT_MS: "8000"
+      BROWSER_RENDER_WAIT_MS: "750"
+      BROWSER_WORKER_TIMEOUT_SECONDS: "15"
     volumes:
       - ./src:/app/src
       - ./artifacts:/app/artifacts
       - /var/run/docker.sock:/var/run/docker.sock # Acceso estricto solo para el manager
 
+  playwright-image:
+    build:
+      context: .
+      dockerfile: sandbox/playwright.Dockerfile
+    image: phishguard-playwright:local
+    profiles: ["sandbox-build"]
+    command: ["--help"]
+
+  dns-resolver:
+    image: coredns/coredns:1.14.7@sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286
+    user: "65532:65532"
+    command: ["-conf", "/etc/coredns/Corefile"]
+    read_only: true
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 32
+    mem_limit: 64m
+    cpus: 0.25
+    volumes:
+      - ./sandbox/Corefile:/etc/coredns/Corefile:ro
+    networks:
+      browser_internal:
+        ipv4_address: 172.31.0.3
+      browser_public: {}
+
+  egress-proxy:
+    image: ubuntu/squid:6.6-24.04_edge@sha256:8a3baed477e2c282ab8aa5edad442f69873246964f225c5c2ae8364b6610963c
+    user: "13:13"
+    entrypoint: ["/usr/sbin/squid", "-f", "/etc/squid/squid.conf", "-NYC"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: 0.50
+    tmpfs:
+      - /run:size=8m,noexec,nosuid,nodev
+      - /tmp:size=16m,noexec,nosuid,nodev
+      - /var/log/squid:size=16m,noexec,nosuid,nodev
+      - /var/spool/squid:size=16m,noexec,nosuid,nodev
+    volumes:
+      - ./sandbox/squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      browser_internal:
+        ipv4_address: 172.31.0.2
+      browser_public: {}
+
 volumes:
   pgdata:
+
+networks:
+  browser_internal:
+    name: phishguard_browser_internal
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+  browser_public:
+    name: phishguard_browser_public

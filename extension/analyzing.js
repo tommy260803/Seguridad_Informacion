@@ -7,13 +7,14 @@ if (targetUrl) {
 }
 
 const DEFAULT_ENDPOINT = "http://localhost:8080/analyses";
+const MAX_POLL_ATTEMPTS = 90;
 
 async function pollAnalysis() {
   chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT }).then(async ({ endpoint }) => {
     try {
       let attempts = 0;
       while (true) {
-        if (++attempts > 15) {
+        if (++attempts > MAX_POLL_ATTEMPTS) {
           console.warn("Tiempo de espera agotado, continuando navegación.");
           window.location.replace(targetUrl);
           break;
