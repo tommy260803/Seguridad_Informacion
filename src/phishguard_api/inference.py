@@ -5,9 +5,14 @@ from typing import Any, Dict
 
 from phishguard_data.urls import canonicalize_url
 from phishguard_data.psl import PublicSuffixList
-from phishguard_ml.features import UrlFeatureContext, FEATURE_NAMES, extract_url_features
+from phishguard_ml.features import UrlFeatureContext, FEATURE_NAMES, FEATURE_PROFILES, extract_url_features
+from phishguard_ml.infrastructure import INFRA_FEATURE_NAMES, extract_infrastructure_features
+from phishguard_ml.content import CONTENT_FEATURE_NAMES, extract_content_features
+from phishguard_ml.visual import VISUAL_FEATURE_NAMES, extract_visual_features
 from phishguard_orchestrator.engine import AdaptivePolicy, decide_next
 from phishguard_api.models import JobStatus, Event
+
+_AUTHORITY_ONLY = list(FEATURE_PROFILES["authority_only"])
 
 class UnifiedModelManager:
     def __init__(self):
@@ -61,40 +66,49 @@ def predict_m0(url: str) -> float:
     return prob
 
 def predict_m1(url_features: Dict[str, float], infra_features: Dict[str, float], prev_prob: float) -> float:
-    """M4: Concatenación URL + Infra"""
+    """M1: Concatenación URL authority_only + Infra"""
     if not registry.m1_model:
-        # Fallback de adaptación si no hay modelo entrenado
-        # Ajusta probabilidad basándose en la presencia de IPs o fallas de TLS
         prob = prev_prob
         if infra_features.get("has_ip_host", 0.0) == 1.0:
             prob = min(0.99, prob + 0.3)
         if infra_features.get("tls_verification_failure_count", 0.0) > 0:
             prob = min(0.99, prob + 0.2)
         return prob
-        
-    # TODO: Cuando haya modelo .joblib, extraer order de features y concatenar.
-    return prev_prob
+    feature_names = registry.m1_model["feature_names"]
+    url_part = [url_features.get(name, 0.0) for name in _AUTHORITY_ONLY]
+    infra_part = [infra_features.get(name, 0.0) for name in INFRA_FEATURE_NAMES]
+    feature_array = np.array([url_part + infra_part])
+    model = registry.m1_model["model"]
+    threshold = registry.m1_model.get("threshold", 0.5)
+    prob = float(model.predict_proba(feature_array)[0][1])
+    return prob
 
 def predict_m2(url_features: Dict[str, float], infra_features: Dict[str, float], content_features: Dict[str, float], prev_prob: float) -> float:
-    """M4: Concatenación URL + Infra + Content"""
+    """M2: Concatenación URL authority_only + Infra + Content"""
     if not registry.m2_model:
         prob = prev_prob
-        # HEURÍSTICA: Lista blanca temporal para evitar bloquear sitios seguros reales 
-        # (hasta que se entrene la red M2 con el dataset final)
-        safe_domains = ["netflix.com", "facebook.com", "google.com", "bbva.com", "viabcp.com"]
-        # Extraemos el dominio bruto aproximado de las features (o asumimos basado en prob si es muy seguro)
-        
-        # Si pide contraseñas, es sospechoso, pero no si es un sitio seguro conocido (simplificación)
         if content_features.get("html_password_input_count", 0.0) > 0:
             prob = min(0.99, prob + 0.4)
         else:
             prob = prob * 0.4
-            
         return prob
-    return prev_prob
+    url_part = [url_features.get(name, 0.0) for name in _AUTHORITY_ONLY]
+    infra_part = [infra_features.get(name, 0.0) for name in INFRA_FEATURE_NAMES]
+    content_part = [content_features.get(name, 0.0) for name in CONTENT_FEATURE_NAMES]
+    feature_array = np.array([url_part + infra_part + content_part])
+    model = registry.m2_model["model"]
+    prob = float(model.predict_proba(feature_array)[0][1])
+    return prob
 
 def predict_m3(url_features: Dict[str, float], infra_features: Dict[str, float], content_features: Dict[str, float], visual_features: Dict[str, float], prev_prob: float) -> float:
-    """M4: Concatenación URL + Infra + Content + Visual"""
+    """M3: Concatenación URL authority_only + Infra + Content + Visual"""
     if not registry.m3_model:
         return prev_prob
-    return prev_prob
+    url_part = [url_features.get(name, 0.0) for name in _AUTHORITY_ONLY]
+    infra_part = [infra_features.get(name, 0.0) for name in INFRA_FEATURE_NAMES]
+    content_part = [content_features.get(name, 0.0) for name in CONTENT_FEATURE_NAMES]
+    visual_part = [visual_features.get(name, 0.0) for name in VISUAL_FEATURE_NAMES]
+    feature_array = np.array([url_part + infra_part + content_part + visual_part])
+    model = registry.m3_model["model"]
+    prob = float(model.predict_proba(feature_array)[0][1])
+    return prob

@@ -24,6 +24,87 @@ el alcance y gate están en
 El siguiente entregable científico es comparar M1 contra M0 usando el piloto
 autorizado y sus mismos splits congelados.
 
+## Ejecución local (Docker)
+
+### Requisitos previos
+
+- Docker Desktop instalado y en ejecución
+- Al menos 4 GB de RAM disponible para Docker
+- Puertos 8080, 5433, 53 y 3128 libres
+
+### Pasos
+
+1. **Clonar el repositorio** (si no está hecho):
+   ```bash
+   git clone <url-del-repositorio>
+   cd Seguridad_Informacion
+   ```
+
+2. **Crear archivo de variables de entorno**:
+   ```bash
+   cp .env.example .env
+   ```
+   Edita el archivo `.env` y establece una contraseña segura para PostgreSQL:
+   ```
+   POSTGRES_PASSWORD=tu-contraseña-segura
+   ```
+
+3. **Construir imagen de Playwright** (necesaria para sandbox aislado):
+   ```bash
+   docker compose --profile sandbox-build build playwright-image
+   ```
+
+4. **Levantar todos los servicios**:
+   ```bash
+   docker compose up -d --build
+   ```
+
+5. **Verificar que los servicios estén corriendo**:
+   ```bash
+   docker compose ps
+   ```
+   Deberías ver 4 contenedores:
+   - `phishguard_api` (puerto 8080)
+   - `phishguard_db` (puerto 5433)
+   - `dns-resolver` (puerto 53)
+   - `egress-proxy` (puerto 3128)
+
+6. **Probar la API**:
+   ```bash
+   # Health check
+   curl http://127.0.0.1:8080/health
+
+   # Enviar análisis
+   curl -X POST http://127.0.0.1:8080/analyses \
+     -H "Content-Type: application/json" \
+     -d '{"url": "https://example.com"}'
+
+   # Dashboard web
+   # Abrir en navegador: http://127.0.0.1:8080/dashboard
+   ```
+
+### Servicios incluidos
+
+| Servicio | Descripción | Puerto |
+|----------|-------------|--------|
+| `api` | Backend FastAPI + worker asíncrono | 8080 → 8000 |
+| `db` | PostgreSQL 16 (datos persistentes) | 5433 → 5432 |
+| `sandbox_manager` | Gestor de sandboxes aislados | - |
+| `dns-resolver` | CoreDNS para resolución interna | 53 |
+| `egress-proxy` | Squid proxy de egreso | 3128 |
+
+### Detener servicios
+
+```bash
+docker compose down
+```
+
+### Limpiar datos y volúmenes
+
+```bash
+docker compose down -v  # Elimina volúmenes de datos
+```
+
 ## Documentos de la Fase 0
 
 - [Indice y decisiones](docs/phase-0/README.md)

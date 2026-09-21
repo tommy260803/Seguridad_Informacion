@@ -3,6 +3,7 @@ import base64
 import json
 import os
 import tempfile
+from pathlib import Path
 
 import docker
 from sqlalchemy import select
@@ -11,6 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from phishguard_api.database import async_session_maker
 from phishguard_api.models import Event, JobStatus, SandboxTask
 from phishguard_content.analyzer import analyze_html
+from phishguard_data.psl import PublicSuffixList
+from phishguard_infra.analyzer import InfrastructureAnalyzer
+from phishguard_infra.config import load_infrastructure_config
+from phishguard_infra.resolver import SocketResolver
+from phishguard_infra.transport import PinnedHttpTransport
 
 
 class BrowserSandboxError(RuntimeError):
@@ -22,6 +28,42 @@ try:
 except Exception as exc:
     print(f"WARNING: Docker is unavailable for browser sandbox: {exc}", flush=True)
     docker_client = None
+
+
+# --- Infrastructure analyzer initialization ---
+def _init_infra_analyzer() -> InfrastructureAnalyzer | None:
+    """Initialize the real infrastructure analyzer from config and PSL."""
+    config_path = os.getenv(
+        "INFRA_CONFIG_PATH",
+        "configs/infrastructure-analyzer.json" if os.name == "nt" else "/app/configs/infrastructure-analyzer.json",
+    )
+    psl_paths = list(Path("data/raw").rglob("public_suffix_list.dat"))
+    if not psl_paths:
+        print("WARNING: PSL not found; infrastructure analysis will be unavailable", flush=True)
+        return None
+    if not Path(config_path).exists():
+        print(f"WARNING: Infrastructure config not found at {config_path}; infrastructure analysis unavailable", flush=True)
+        return None
+    try:
+        config = load_infrastructure_config(config_path)
+        psl = PublicSuffixList.from_file(sorted(psl_paths)[-1])
+        resolver = SocketResolver()
+        transport = PinnedHttpTransport(config)
+        print(f"Infrastructure analyzer initialized (version={config.analyzer_version})", flush=True)
+        return InfrastructureAnalyzer(config, psl, resolver, transport)
+    except Exception as exc:
+        print(f"WARNING: Failed to initialize infrastructure analyzer: {exc}", flush=True)
+        return None
+
+
+_infra_analyzer: InfrastructureAnalyzer | None = None
+
+
+def _get_infra_analyzer() -> InfrastructureAnalyzer | None:
+    global _infra_analyzer
+    if _infra_analyzer is None:
+        _infra_analyzer = _init_infra_analyzer()
+    return _infra_analyzer
 
 
 def sanitize_and_save_preview(job_id: str, url: str, raw_html: str | bytes) -> None:
@@ -121,6 +163,7 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask) -> None
         os.makedirs(screenshots_dir, exist_ok=True)
         features: dict[str, float] = {}
         llm_details = None
+        evidence_status = "success"
         screenshot_path = os.path.join(screenshots_dir, f"{task.job_id}.png")
         if task.modality == "visual" and os.path.isfile(screenshot_path):
             # Content already visited this URL for this job. Reuse its evidence
@@ -161,12 +204,32 @@ async def process_sandbox_task(session: AsyncSession, task: SandboxTask) -> None
             features = visual_res.features
             probability = 0.5
         elif task.modality == "infrastructure":
-            await asyncio.sleep(2)
-            features = {"infrastructure_available": 1.0, "has_ip_host": 0.0, "tls_verification_failure_count": 0.0, "final_uses_https": 1.0}
-            probability = 0.4
+            analyzer = _get_infra_analyzer()
+            if analyzer is None:
+                raise BrowserSandboxError("infrastructure_analyzer_unavailable: PSL or config missing")
+            infra_result = await asyncio.get_event_loop().run_in_executor(
+                None, analyzer.analyze, task.url
+            )
+            features = infra_result.features
+            evidence_status = infra_result.status
+            probability = 0.5
+            if infra_result.status == "blocked":
+                probability = 0.85
+            elif infra_result.status == "error":
+                probability = 0.6
+            elif infra_result.status == "success":
+                tls_fail = features.get("tls_verification_failure_count", 0) > 0
+                has_ip = features.get("dns_ipv4_count_initial", 0) > 0 and features.get("dns_ipv6_count_initial", 0) == 0
+                redirects = features.get("redirect_registered_domain_change_count", 0)
+                if tls_fail:
+                    probability = min(0.95, probability + 0.25)
+                if has_ip:
+                    probability = min(0.95, probability + 0.15)
+                if redirects >= 2:
+                    probability = min(0.95, probability + 0.15)
         else:
             probability = 0.5
-        task.result_json = {"status": "success", "probability": probability, "features": features, "llm_details": llm_details}
+        task.result_json = {"status": evidence_status, "probability": probability, "features": features, "llm_details": llm_details}
         task.status = JobStatus.COMPLETED
         session.add(Event(job_id=task.job_id, step=task.modality, event_type="acquire", details={"msg": "Sandbox acquisition completed", "features": list(features.keys())}))
     except Exception as exc:

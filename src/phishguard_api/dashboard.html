@@ -3,199 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhishGuard Científico</title>
+    <title>PhishGuard - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        /* Transiciones suaves para la UI */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen font-sans transition-colors duration-200">
-    
-    <!-- Navbar superior -->
-    <header class="bg-white dark:bg-gray-800 shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+    <header class="bg-gray-800 shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
         <div class="flex items-center space-x-3">
-            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-            <h1 class="text-xl font-bold tracking-tight">PhishGuard <span class="text-sm font-normal text-gray-500 dark:text-gray-400">Scientific Platform</span></h1>
+            <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <h1 class="text-xl font-bold">PhishGuard <span class="text-sm font-normal text-gray-400">Dashboard</span></h1>
         </div>
-        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
-            🌓
-        </button>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-400" id="last-update"></span>
+            <button onclick="refreshAll()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Actualizar</button>
+        </div>
     </header>
 
-    <div class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Panel Izquierdo: Control y Estado -->
-        <div class="lg:col-span-1 space-y-6">
-            <!-- Formulario de Análisis -->
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <h2 class="text-lg font-semibold mb-4">Nuevo Análisis</h2>
-                <form id="analyze-form" class="space-y-4">
-                    <div>
-                        <input type="url" id="url-input" required placeholder="https://ejemplo.com" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                    </div>
-                    <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex justify-center items-center">
-                        <span>Lanzar Orquestador</span>
+    <main class="max-w-7xl mx-auto p-6">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-gray-700">
+                <div class="text-gray-400 text-sm">Total Analizados</div>
+                <div class="text-3xl font-bold text-white" id="stat-total">-</div>
+            </div>
+            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-red-900/50">
+                <div class="text-red-400 text-sm">Phishing</div>
+                <div class="text-3xl font-bold text-red-400" id="stat-phishing">-</div>
+            </div>
+            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-yellow-900/50">
+                <div class="text-yellow-400 text-sm">Warnings</div>
+                <div class="text-3xl font-bold text-yellow-400" id="stat-warning">-</div>
+            </div>
+            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-green-900/50">
+                <div class="text-green-400 text-sm">Legitimos</div>
+                <div class="text-3xl font-bold text-green-400" id="stat-legitimate">-</div>
+            </div>
+            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-blue-900/50">
+                <div class="text-blue-400 text-sm">Tasa Phishing</div>
+                <div class="text-3xl font-bold text-blue-400" id="stat-rate">-</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Quick Analysis -->
+            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h2 class="text-lg font-semibold mb-4">Analisis Rapido</h2>
+                <form id="check-form" class="space-y-3">
+                    <input type="url" id="url-input" required placeholder="https://ejemplo.com" 
+                        class="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
+                        Verificar URL
                     </button>
                 </form>
-            </div>
-
-            <!-- Resumen de Decisión -->
-            <div id="decision-panel" class="hidden bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 fade-in">
-                <h2 class="text-lg font-semibold mb-4">Veredicto Final</h2>
-                <div id="decision-badge" class="text-center py-4 rounded-lg font-bold text-2xl mb-4 uppercase tracking-widest">
-                    --
-                </div>
-                <div class="grid grid-cols-2 gap-4 text-center">
-                    <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Probabilidad</p>
-                        <p id="prob-val" class="text-xl font-semibold">--%</p>
-                    </div>
-                    <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase">Estado</p>
-                        <p id="status-val" class="text-xl font-semibold capitalize">--</p>
+                <div id="check-result" class="mt-4 hidden">
+                    <div class="p-4 rounded-lg" id="result-box">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-lg" id="result-decision"></span>
+                            <span class="text-2xl font-bold" id="result-prob"></span>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-400" id="result-model"></div>
+                        <div class="mt-2 text-sm" id="result-brand"></div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Panel Derecho: Trazabilidad -->
-        <div class="lg:col-span-2">
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 min-h-[500px]">
-                <h2 class="text-lg font-semibold mb-6 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Trazabilidad de Ejecución (En Vivo)
-                </h2>
-                
-                <div id="timeline" class="relative border-l border-gray-200 dark:border-gray-700 ml-3 space-y-6">
-                    <div class="text-gray-400 text-sm italic ml-6">Esperando URL para analizar...</div>
-                </div>
+            <!-- Threat Landscape -->
+            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                <h2 class="text-lg font-semibold mb-4">Marcas Mas Atacadas</h2>
+                <canvas id="brands-chart" height="200"></canvas>
             </div>
         </div>
-    </div>
+
+        <!-- Recent Analyses -->
+        <div class="mt-6 bg-gray-800 p-6 rounded-xl border border-gray-700">
+            <h2 class="text-lg font-semibold mb-4">Analisis Recientes</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-gray-700">
+                            <th class="text-left p-2">URL</th>
+                            <th class="text-left p-2">Decision</th>
+                            <th class="text-left p-2">Probabilidad</th>
+                            <th class="text-left p-2">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
 
     <script>
-        const form = document.getElementById('analyze-form');
-        const input = document.getElementById('url-input');
-        const btn = document.getElementById('submit-btn');
-        const timeline = document.getElementById('timeline');
-        const decisionPanel = document.getElementById('decision-panel');
-        const decisionBadge = document.getElementById('decision-badge');
-        
-        let pollInterval = null;
+        const API = window.location.origin;
+        let brandsChart = null;
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = input.value;
-            if(!url) return;
-            
-            // UI Reset
-            btn.disabled = true;
-            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...';
-            timeline.innerHTML = '';
-            decisionPanel.classList.add('hidden');
-            if(pollInterval) clearInterval(pollInterval);
-
+        async function fetchStats() {
             try {
-                const res = await fetch('/analyses', {
+                const res = await fetch(`${API}/api/stats`);
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.total_analyses || 0;
+                document.getElementById('stat-phishing').textContent = data.phishing_count || 0;
+                document.getElementById('stat-warning').textContent = data.warning_count || 0;
+                document.getElementById('stat-legitimate').textContent = data.legitimate_count || 0;
+                document.getElementById('stat-rate').textContent = `${data.phishing_rate || 0}%`;
+            } catch (e) { console.error('Stats error:', e); }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch(`${API}/api/history?limit=20`);
+                const data = await res.json();
+                const tbody = document.getElementById('history-table');
+                tbody.innerHTML = (data.analyses || []).map(a => `
+                    <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+                        <td class="p-2 max-w-xs truncate" title="${a.url || a.id}">${a.url || a.id.substring(0, 8) + '...'}</td>
+                        <td class="p-2">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${a.decision === 'phishing' ? 'bg-red-900/50 text-red-300' : a.decision === 'warning' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-green-900/50 text-green-300'}">
+                                ${a.decision}
+                            </span>
+                        </td>
+                        <td class="p-2">${(a.probability * 100).toFixed(1)}%</td>
+                        <td class="p-2 text-gray-400">${a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error('History error:', e); }
+        }
+
+        async function fetchBrands() {
+            try {
+                const res = await fetch(`${API}/api/threat-landscape`);
+                const data = await res.json();
+                const brands = data.top_targeted_brands || [];
+                
+                if (brandsChart) brandsChart.destroy();
+                
+                const ctx = document.getElementById('brands-chart').getContext('2d');
+                brandsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: brands.map(b => b.brand),
+                        datasets: [{
+                            label: 'Detecciones',
+                            data: brands.map(b => b.count),
+                            backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#374151' }, ticks: { color: '#9CA3AF' } },
+                            x: { grid: { display: false }, ticks: { color: '#9CA3AF' } }
+                        }
+                    }
+                });
+            } catch (e) { console.error('Brands error:', e); }
+        }
+
+        document.getElementById('check-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url-input').value;
+            const resultDiv = document.getElementById('check-result');
+            resultDiv.classList.remove('hidden');
+            
+            try {
+                const res = await fetch(`${API}/check`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url})
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
                 });
                 const data = await res.json();
                 
-                // Start polling
-                pollInterval = setInterval(() => checkStatus(data.id), 1000);
-            } catch(e) {
-                alert("Error de conexión al servidor");
-                resetBtn();
+                const box = document.getElementById('result-box');
+                const colors = {
+                    phishing: 'bg-red-900/30 border border-red-700',
+                    warning: 'bg-yellow-900/30 border border-yellow-700',
+                    legitimate: 'bg-green-900/30 border border-green-700'
+                };
+                box.className = `p-4 rounded-lg ${colors[data.decision] || colors.legitimate}`;
+                
+                const textColors = {
+                    phishing: 'text-red-400',
+                    warning: 'text-yellow-400',
+                    legitimate: 'text-green-400'
+                };
+                document.getElementById('result-decision').textContent = data.decision.toUpperCase();
+                document.getElementById('result-decision').className = `${textColors[data.decision] || textColors.legitimate} font-bold`;
+                document.getElementById('result-prob').textContent = `${(data.probability * 100).toFixed(1)}%`;
+                document.getElementById('result-model').textContent = `Modelo: ${data.model}`;
+                
+                if (data.brand_analysis) {
+                    document.getElementById('result-brand').innerHTML = `<span class="text-red-400">Marca suplantada: ${data.brand_analysis.closest_brand}</span>`;
+                } else {
+                    document.getElementById('result-brand').innerHTML = '';
+                }
+            } catch (e) {
+                document.getElementById('result-box').className = 'p-4 rounded-lg bg-yellow-900/30 border border-yellow-700';
+                document.getElementById('result-decision').textContent = 'ERROR';
+                document.getElementById('result-prob').textContent = '-';
+                document.getElementById('result-model').textContent = e.message;
             }
         });
 
-        async function checkStatus(id) {
-            try {
-                const res = await fetch(`/analyses/${id}`);
-                const data = await res.json();
-                
-                renderTimeline(data.events || []);
-
-                if (data.status === 'completed' || data.status === 'failed') {
-                    clearInterval(pollInterval);
-                    resetBtn();
-                    showFinalDecision(data);
-                }
-            } catch(e) {
-                console.error("Polling error", e);
-            }
+        function refreshAll() {
+            document.getElementById('last-update').textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
+            fetchStats();
+            fetchHistory();
+            fetchBrands();
         }
 
-        function renderTimeline(events) {
-            if(events.length === 0) return;
-            timeline.innerHTML = '';
-            events.forEach(ev => {
-                const time = new Date(ev.time).toLocaleTimeString();
-                
-                let icon = 'M13 10V3L4 14h7v7l9-11h-7z'; // default bolt
-                let color = 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300';
-                
-                if(ev.type === 'error') {
-                    icon = 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z';
-                    color = 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300';
-                } else if(ev.type === 'decision') {
-                    icon = 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z';
-                    color = 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300';
-                }
-
-                timeline.innerHTML += `
-                    <div class="mb-6 ml-6 fade-in">
-                        <span class="absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white dark:ring-gray-800 ${color}">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${icon}"></path></svg>
-                        </span>
-                        <div class="flex items-center mb-1">
-                            <h3 class="text-md font-semibold capitalize">${ev.step} <span class="text-sm font-normal text-gray-500 mx-2">|</span> <span class="text-sm font-mono text-gray-400">${ev.type}</span></h3>
-                            <time class="ml-auto text-xs font-normal text-gray-400">${time}</time>
-                        </div>
-                        <div class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto">
-                            <pre class="font-mono text-xs">${JSON.stringify(ev.details, null, 2)}</pre>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function showFinalDecision(data) {
-            decisionPanel.classList.remove('hidden');
-            document.getElementById('status-val').innerText = data.status;
-            
-            if(data.status === 'failed') {
-                decisionBadge.className = 'text-center py-4 rounded-lg font-bold text-2xl mb-4 uppercase tracking-widest bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
-                decisionBadge.innerText = 'FALLIDO';
-                document.getElementById('prob-val').innerText = '--';
-                return;
-            }
-
-            document.getElementById('prob-val').innerText = (data.probability * 100).toFixed(1) + '%';
-            
-            if(data.decision === 'phishing') {
-                decisionBadge.className = 'text-center py-4 rounded-lg font-bold text-2xl mb-4 uppercase tracking-widest bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border border-red-200 dark:border-red-800';
-                decisionBadge.innerText = '🚨 PHISHING';
-            } else if(data.decision === 'legitimate') {
-                decisionBadge.className = 'text-center py-4 rounded-lg font-bold text-2xl mb-4 uppercase tracking-widest bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border border-green-200 dark:border-green-800';
-                decisionBadge.innerText = '✅ LEGÍTIMO';
-            } else {
-                decisionBadge.className = 'text-center py-4 rounded-lg font-bold text-2xl mb-4 uppercase tracking-widest bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800';
-                decisionBadge.innerText = '⚠️ INCIERTO';
-            }
-        }
-
-        function resetBtn() {
-            btn.disabled = false;
-            btn.innerHTML = 'Lanzar Orquestador';
-        }
+        // Initial load and auto-refresh
+        refreshAll();
+        setInterval(refreshAll, 30000);
     </script>
 </body>
 </html>

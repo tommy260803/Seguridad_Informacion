@@ -1,7 +1,142 @@
 const urlParams = new URLSearchParams(window.location.search);
 let targetUrl = urlParams.get('url');
 const jobId = urlParams.get('jobId');
+const isPending = urlParams.get('pending') === 'true';
+let probability = urlParams.get('probability');
+let decisionType = (urlParams.get('decision') || 'phishing');
+const bmName = urlParams.get('bm_name') || '';
+const bmDomain = urlParams.get('bm_domain') || '';
+const bmCategory = urlParams.get('bm_category') || '';
+const bmSuggestion = urlParams.get('bm_suggestion') || '';
+const bmDifferentEntity = urlParams.get('bm_diff') === '1';
+const hasBmData = !!(bmName && bmDomain);
 
+// PENDING MODE: backend is still processing, show spinner and poll
+if (isPending && targetUrl) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('.warning-banner').style.background = 'linear-gradient(135deg, #eff6ff, #dbeafe)';
+    document.querySelector('.warning-banner').style.borderColor = '#3b82f6';
+    document.querySelector('.warning-icon-wrap').style.background = '#3b82f6';
+    document.querySelector('.warning-icon-wrap').innerHTML = '<div class="spinner"></div>';
+    document.getElementById('main-title').textContent = 'Analizando sitio...';
+    document.getElementById('main-desc').textContent = 'PhishGuard está verificando la seguridad de este dominio. Esto puede tomar unos segundos.';
+    document.querySelector('.url-status-badge').textContent = '⏳ Analizando';
+    document.querySelector('.url-status-badge').style.background = '#dbeafe';
+    document.querySelector('.url-status-badge').style.color = '#1d4ed8';
+    document.querySelector('.page-subtitle').textContent = 'Verificación en curso contra el motor de detección.';
+    document.getElementById('btn-close').style.display = 'none';
+    document.getElementById('btn-ignore').style.display = 'none';
+    document.getElementById('url-display').textContent = targetUrl;
+
+    // Hide non-essential sections while loading
+    document.getElementById('scenarios-card').style.display = 'none';
+    document.querySelector('.rec-banner').style.display = 'none';
+    const previewCard = document.getElementById('preview-container')?.closest('.card');
+    if (previewCard) previewCard.style.display = 'none';
+
+    // Poll for result
+    const resultKey = `result_${targetUrl}`;
+    const rulesKey = `rules_${targetUrl}`;
+    const bmKey = `brand_mismatch_${targetUrl}`;
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) { clearInterval(poll); return; } // 30s max
+      try {
+        const data = await chrome.storage.local.get([resultKey, rulesKey, bmKey]);
+        const result = data[resultKey];
+        if (result?.ready) {
+          clearInterval(poll);
+          // Rewrite URL params and reload in normal mode
+          const newParams = new URLSearchParams({
+            url: targetUrl,
+            probability: result.probability,
+            decision: result.decision
+          });
+          // Pass brand_mismatch data directly via URL to avoid storage race
+          const bmData = data[bmKey];
+          if (bmData) {
+            newParams.set('bm_name', bmData.brand_full_name || '');
+            newParams.set('bm_domain', bmData.local_domain || '');
+            newParams.set('bm_category', bmData.category || '');
+            newParams.set('bm_suggestion', bmData.suggestion || '');
+            if (bmData.is_different_entity) newParams.set('bm_diff', '1');
+          }
+          window.location.search = newParams.toString();
+        }
+      } catch (e) {
+        console.error('[PhishGuard] Poll error:', e);
+      }
+    }, 500);
+  });
+}
+
+// === NORMAL MODE (not pending) ===
+if (!isPending) {
+if (decisionType === 'legitimate') {
+  document.querySelector('.warning-banner').style.background = 'linear-gradient(135deg, #f0fdf4, #bbf7d0)';
+  document.querySelector('.warning-banner').style.borderColor = '#16a34a';
+  document.querySelector('.warning-icon-wrap').style.background = '#16a34a';
+  document.querySelector('.warning-icon-wrap').textContent = '✓';
+  document.getElementById('main-title').textContent = 'Sitio seguro';
+  document.getElementById('main-desc').textContent = 'Este sitio no presenta indicaciones de phishing. Puedes navegar con normalidad.';
+  document.querySelector('.url-status-badge').textContent = '✓ Seguro';
+  document.querySelector('.url-status-badge').style.background = '#f0fdf4';
+  document.querySelector('.url-status-badge').style.color = '#166534';
+  document.querySelector('.page-subtitle').textContent = 'El análisis determinó que este sitio es seguro.';
+  document.getElementById('btn-close').innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    Ir al sitio
+  `;
+  document.getElementById('btn-close').className = 'btn';
+  document.getElementById('btn-close').style.background = '#16a34a';
+  document.getElementById('btn-close').style.color = 'white';
+  document.getElementById('btn-ignore').textContent = 'Volver atrás';
+} else if (decisionType === 'warning') {
+  document.querySelector('.warning-banner').style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)';
+  document.querySelector('.warning-banner').style.borderColor = '#f59e0b';
+  document.querySelector('.warning-icon-wrap').style.background = '#f59e0b';
+  document.querySelector('.warning-icon-wrap').textContent = '⚠';
+  document.getElementById('main-title').textContent = 'Advertencia: Dominio fuera de tu región';
+  document.getElementById('main-desc').textContent = 'Este sitio pertenece a una marca conocida pero no es la versión para tu país. Puede ser legítimo, pero verifica que sea la versión correcta.';
+  document.querySelector('.url-status-badge').textContent = '⚠ Advertencia';
+  document.querySelector('.url-status-badge').style.background = '#fef3c7';
+  document.querySelector('.url-status-badge').style.color = '#92400e';
+  document.querySelector('.page-subtitle').textContent = 'Análisis geográfico de dominio detectó una inconsistencia de ubicación.';
+
+  // Adapt sections for warning mode
+  document.querySelector('#scenarios-card h3').textContent = '📋 Información del Sitio y Contexto Geográfico';
+  document.querySelector('#scenarios-card .badge').textContent = 'Contexto Regional';
+  document.querySelector('#scenarios-card .badge').className = 'badge badge-warning';
+  document.querySelector('#scenarios-card .badge').style.fontSize = '11px';
+  document.querySelector('#scenarios-card .badge').style.background = '#fef3c7';
+  document.querySelector('#scenarios-card .badge').style.color = '#92400e';
+
+  // Change "¿Qué ocurriría..." subtitle
+  const scenariosSubtitle = document.querySelector('#scenarios-card [style*="font-size: 13px; font-weight: 700"]');
+  if (scenariosSubtitle) scenariosSubtitle.textContent = '📍 Detalles del análisis geográfico:';
+
+  // Change button labels
+  document.getElementById('btn-close').innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    Ir a la versión de mi país
+  `;
+  document.getElementById('btn-close').className = 'btn';
+  document.getElementById('btn-close').style.background = '#2563eb';
+  document.getElementById('btn-close').style.color = 'white';
+  document.getElementById('btn-ignore').textContent = 'Continuar en este sitio de todos modos';
+
+  // Change why-percentage-steps for warning
+  const whyBlock = document.querySelector('.why-block');
+  if (whyBlock) {
+    const steps = whyBlock.querySelectorAll('.why-step');
+    if (steps[0]) steps[0].querySelector('div').innerHTML = '<b>Análisis de marca:</b> Se verificó si el dominio pertenece a una institución financiera reconocida.';
+    if (steps[1]) steps[1].querySelector('div').innerHTML = '<b>Geolocalización del usuario:</b> Se comparó tu ubicación con la región del dominio visitado.';
+    if (steps[2]) steps[2].querySelector('div').innerHTML = '<b>Decisión:</b> El dominio es legítimo pero no corresponde a la versión de tu país.';
+  }
+}
+
+// Populate URL info
 if (targetUrl) {
   document.getElementById('url-display').textContent = targetUrl;
   try {
@@ -14,10 +149,42 @@ if (targetUrl) {
   } catch (e) {
     document.getElementById('domain-val').textContent = targetUrl;
   }
+
+  // Load geolocation and domain age from rules_analysis
+  loadRulesData(targetUrl);
 }
 
-// Botón para cerrar pestaña de manera segura
+// Close tab button / Navigate to local version
 document.getElementById('btn-close').addEventListener('click', () => {
+  if (decisionType === 'warning') {
+    // In warning mode, load rules to find the local_domain and navigate there
+    const storageKey = `rules_${targetUrl}`;
+    const brandMismatchKey = `brand_mismatch_${targetUrl}`;
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get([storageKey, brandMismatchKey]).then((data) => {
+        const bm = data[brandMismatchKey];
+        const rulesAnalysis = data[storageKey];
+        const mismatchRule = rulesAnalysis?.all_rules?.find(r => r.rule === 'brand_country_mismatch');
+        const brandMatch = bm || (mismatchRule?.triggered ? mismatchRule.details : null);
+        if (brandMatch?.local_domain) {
+          const localUrl = brandMatch.local_domain.startsWith('http') ? brandMatch.local_domain : `https://${brandMatch.local_domain}`;
+          window.location.href = localUrl;
+        } else {
+          window.close();
+        }
+      }).catch(() => window.close());
+    } else {
+      window.close();
+    }
+    return;
+  }
+  if (decisionType === 'legitimate') {
+    // Navigate to the legitimate URL
+    if (targetUrl) {
+      window.location.href = targetUrl;
+    }
+    return;
+  }
   try {
     if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.getCurrent) {
       chrome.tabs.getCurrent(tab => {
@@ -35,17 +202,7 @@ document.getElementById('btn-close').addEventListener('click', () => {
   }
 });
 
-// Helper seguro para obtener el endpoint
-function getEndpoint() {
-  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    return chrome.storage.local.get({ endpoint: 'http://localhost:8080/analyses' })
-      .then(res => res.endpoint || 'http://localhost:8080/analyses')
-      .catch(() => 'http://localhost:8080/analyses');
-  }
-  return Promise.resolve('http://localhost:8080/analyses');
-}
-
-// Botón para ignorar la advertencia
+// Ignore button
 document.getElementById('btn-ignore').addEventListener('click', () => {
   const finalUrl = targetUrl || document.getElementById('url-display').textContent;
   if (finalUrl && !finalUrl.startsWith('Cargando')) {
@@ -54,9 +211,15 @@ document.getElementById('btn-ignore').addEventListener('click', () => {
         const allowed = allowed_urls || [];
         try {
           const origin = new URL(finalUrl).origin;
-          if (!allowed.includes(origin)) allowed.push(origin);
+          const existing = allowed.find(e => e.origin === origin);
+          if (!existing) {
+            allowed.push({ origin, timestamp: Date.now() });
+          }
         } catch (e) {
-          if (!allowed.includes(finalUrl)) allowed.push(finalUrl);
+          const existing = allowed.find(e => e.origin === finalUrl);
+          if (!existing) {
+            allowed.push({ origin: finalUrl, timestamp: Date.now() });
+          }
         }
         chrome.storage.local.set({ allowed_urls: allowed }, () => {
           window.location.href = finalUrl;
@@ -68,325 +231,626 @@ document.getElementById('btn-ignore').addEventListener('click', () => {
   }
 });
 
-// Cargar información completa del análisis desde el backend
-if (jobId) {
-  getEndpoint().then(endpoint => {
-    const base = endpoint.replace(/\/analyses\/?$/, '');
-    fetch(`${base}/analyses/${jobId}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        // 1. Asegurar URL real
-        if (data.url) {
-          targetUrl = targetUrl || data.url;
-          document.getElementById('url-display').textContent = data.url;
-          try {
-            const u = new URL(data.url);
-            document.getElementById('domain-val').textContent = u.hostname;
-            const isHttps = u.protocol === 'https:';
-            const sslEl = document.getElementById('ssl-val');
-            sslEl.textContent = isHttps ? 'HTTPS Cifrado' : 'HTTP No Seguro';
-            sslEl.className = isHttps ? 'badge badge-warning' : 'badge badge-danger';
-          } catch (e) {
-            document.getElementById('domain-val').textContent = data.url;
-          }
-        }
+// Detect brand with fuzzy matching
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
 
-        // 2. Probabilidad y Nivel de Riesgo
-        const prob = Number(data.probability ?? 1.0);
-        const probPct = (prob * 100).toFixed(1) + '%';
-        
-        document.getElementById('prob-val').textContent = `${probPct}`;
-        document.getElementById('risk-pct-banner').textContent = probPct;
+function extractBrandFromUrl(url) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    const domain = hostname.split('.')[0];
+    const brands = ['facebook','google','microsoft','apple','amazon','paypal','netflix','instagram','whatsapp','twitter','linkedin','github','bbva','bcp','banco','santander','hsbc','scotiabank','interbank','bancoazteca','banrural','bancamiga','bancochile','itau','bradesco','bancocontinental','mibanco','pichincha','bancolombia','davivienda','bankaool','nu','rappi','mercadopago'];
+    
+    let bestBrand = null, bestDist = Infinity;
+    for (const brand of brands) {
+      const dist = levenshtein(domain, brand);
+      if (dist <= 2 && dist < bestDist) {
+        bestDist = dist;
+        bestBrand = brand;
+      }
+    }
+    if (bestBrand) return bestBrand.charAt(0).toUpperCase() + bestBrand.slice(1);
+  } catch (e) {}
+  return null;
+}
 
-        const riskEl = document.getElementById('risk-text');
-        if (prob >= 0.8) {
-          riskEl.textContent = 'CRÍTICO';
-          riskEl.style.color = '#dc2626';
-        } else if (prob >= 0.5) {
-          riskEl.textContent = 'MEDIO';
-          riskEl.style.color = '#d97706';
-        } else {
-          riskEl.textContent = 'BAJO';
-          riskEl.style.color = '#16a34a';
-        }
+// Main logic: use jobId or direct probability
+function populateWithCheckData(prob, url) {
+  const probPct = (prob * 100).toFixed(1) + '%';
+  const isWarning = decisionType === 'warning';
+  
+  document.getElementById('prob-val').textContent = probPct;
+  document.getElementById('risk-pct-banner').textContent = probPct;
 
-        // 3. Extraer detalles de la IA (Gemini) y del modelo base (M0)
-        let llmDetails = null;
-        let m0Prob = null;
-        if (Array.isArray(data.evidence)) {
-          for (const ev of data.evidence) {
-            if (ev.source === 'LLM' && ev.details) {
-              llmDetails = ev.details;
-            }
-            if (ev.source === 'M0' && ev.value !== undefined) {
-              m0Prob = Number(ev.value);
-            }
-          }
-        }
+  const riskEl = document.getElementById('risk-text');
+  if (isWarning) {
+    riskEl.textContent = 'PRECAUCIÓN';
+    riskEl.style.color = '#d97706';
+  } else if (prob >= 0.8) {
+    riskEl.textContent = 'CRÍTICO';
+    riskEl.style.color = '#dc2626';
+  } else if (prob >= 0.5) {
+    riskEl.textContent = 'MEDIO';
+    riskEl.style.color = '#d97706';
+  } else {
+    riskEl.textContent = 'BAJO';
+    riskEl.style.color = '#16a34a';
+  }
 
-        // 4. Integrar diagnósticos y recomendaciones de la IA
-        if (llmDetails) {
-          // Marca suplantada
-          if (llmDetails.brand_spoofed && llmDetails.brand_spoofed !== 'Desconocida') {
-            document.getElementById('brand-val').textContent = llmDetails.brand_spoofed;
-            document.getElementById('threat-val').textContent = `Suplantación de ${llmDetails.brand_spoofed} (Typosquatting)`;
-            document.getElementById('main-title').textContent = `Peligro: Suplantación de ${llmDetails.brand_spoofed}`;
-          } else {
-            document.getElementById('brand-val').textContent = 'Dominio de riesgo genérico';
-            document.getElementById('threat-val').textContent = 'Sitio sospechoso de phishing';
-          }
+  // Detect brand
+  const brand = extractBrandFromUrl(url);
+  const hostname = (() => { try { return new URL(url).hostname; } catch(e) { return url; } })();
 
-          // Razón por la que se bloqueó
-          if (llmDetails.reason) {
-            document.getElementById('main-desc').innerHTML = `<b>Diagnóstico de la IA:</b> ${llmDetails.reason}<br><span style="color:#64748b; font-size:13px; margin-top:4px; display:inline-block;">Se recomienda no abrir ni ingresar contraseñas o datos personales.</span>`;
-          }
+  if (isWarning) {
+    document.getElementById('brand-val').textContent = brand || 'Marca reconocida';
+    document.getElementById('brand-val').className = 'badge badge-warning';
+    document.getElementById('threat-val').textContent = 'Dominio legítimo fuera de región';
+    document.getElementById('threat-val').className = 'badge badge-warning';
+    document.getElementById('main-title').textContent = 'Advertencia: Dominio fuera de tu región';
+    document.getElementById('main-desc').textContent = 'Este sitio pertenece a una marca conocida pero no es la versión para tu país. Puede ser legítimo, pero verifica que sea la versión correcta.';
+  } else {
+    if (brand) {
+      document.getElementById('brand-val').textContent = brand;
+      document.getElementById('threat-val').textContent = `Suplantación de ${brand} (Typosquatting)`;
+      document.getElementById('main-title').textContent = `Peligro: Suplantación de ${brand}`;
+      document.getElementById('main-desc').innerHTML = `<b>Diagnóstico de IA:</b> El dominio parece ser una suplantación de ${brand}. Se recomienda no interactuar ni ingresar contraseñas.`;
+    } else {
+      document.getElementById('brand-val').textContent = 'Dominio de riesgo genérico';
+      document.getElementById('threat-val').textContent = 'Sitio sospechoso de phishing';
+    }
+  }
 
-          // Recomendación personalizada de la IA
-          if (llmDetails.recommendation) {
-            document.getElementById('rec-value').textContent = llmDetails.recommendation;
-          }
-        } else {
-          document.getElementById('brand-val').textContent = 'Patrón de phishing detectado';
-          document.getElementById('threat-val').textContent = 'Estructura sospechosa';
-          document.getElementById('rec-value').textContent = 'Cierra esta ventana inmediatamente. El sistema ha identificado indicadores coincidentes con portales fraudulentos.';
-        }
+  // Why description
+  if (isWarning) {
+    document.getElementById('why-percentage-desc').textContent =
+      `Este dominio fue identificado como una marca conocida. El análisis geográfico detectó que no corresponde a la versión de tu país.`;
+  } else {
+    const geoEl = document.getElementById('geo-val');
+    const geoText = geoEl && geoEl.textContent !== 'Verificando...' ? geoEl.textContent : '';
+    const geoWarning = geoText ? ` El servidor está ubicado en ${geoText}, una región con alta asociación a campañas de phishing.` : '';
+    document.getElementById('why-percentage-desc').textContent =
+      `Se asignó un score de riesgo del ${probPct}. El modelo M0+Brand+Rules detectó patrones sospechosos en la estructura del dominio.${geoWarning} ${brand ? `La marca "${brand}" podría estar siendo suplantada.` : ''}`;
+  }
 
-        // 5. Explicación de por qué se asignó este porcentaje
-        let whyDesc = `Se asignó un score de riesgo del ${probPct}. `;
-        if (llmDetails && llmDetails.brand_spoofed && llmDetails.brand_spoofed !== 'Desconocida') {
-          whyDesc += `El agente inteligente Gemini detectó una técnica activa de suplantación dirigida a "${llmDetails.brand_spoofed}". `;
-        }
-        if (m0Prob !== null) {
-          whyDesc += `El modelo clasificador léxico de URL evaluó la anomalía sintáctica con un puntaje de ${(m0Prob * 100).toFixed(1)}%. `;
-        }
-        whyDesc += `La coincidencia de ambos modelos concluyó con máxima certeza que se trata de un sitio hostil.`;
-        document.getElementById('why-percentage-desc').textContent = whyDesc;
+  // Recommendation
+  if (isWarning) {
+    const recBrand = hasBmData ? bmName : brand;
+    const recDomain = hasBmData ? bmDomain : '';
+    if (recBrand && recDomain) {
+      document.getElementById('rec-value').textContent = bmDifferentEntity
+        ? `Este sitio es seguro pero es de otro país. Si buscas ${recBrand} de tu país, te recomendamos visitar ${recDomain}.`
+        : `Si buscas ${recBrand}, te recomendamos visitar ${recDomain} directamente. Estás en la versión de ${recBrand} para otro país, no para el tuyo.`;
+    } else if (recBrand) {
+      document.getElementById('rec-value').textContent = `Si buscas ${recBrand}, te recomendamos acceder a la versión oficial de tu país. Busca "${recBrand}" en tu buscador o utiliza la app oficial.`;
+    } else {
+      document.getElementById('rec-value').textContent = 'Verifica que este sitio corresponda a la versión correcta para tu país antes de ingresar datos.';
+    }
+  } else {
+    document.getElementById('rec-value').textContent = 'Cierra esta página inmediatamente. No ingreses credenciales ni datos personales en este sitio.';
+  }
 
-        // 6. Vista previa mediante Captura Segura en Servidor (RBI Headless Screenshot)
-        const screenshotUrl = `${base}/screenshots/${jobId}.png`;
-        const previewContainer = document.getElementById('preview-container');
+  // Purpose text
+  if (isWarning && hasBmData) {
+    document.getElementById('page-purpose-text').textContent = bmDifferentEntity
+      ? `Este sitio coincide con la marca ${bmName} pero es de otro país. Estás visitando ${hostname} y la versión local es ${bmDomain}.`
+      : `Este sitio pertenece a ${bmName} (${bmCategory || 'institución financiera'}) pero no es la versión de tu país. Estás visitando ${hostname} y la versión local es ${bmDomain}.`;
+  } else if (isWarning) {
+    document.getElementById('page-purpose-text').textContent = brand
+      ? `Portal de ${brand}. Dominio: ${hostname}. Este es un sitio legítimo, pero no es la versión para tu país.`
+      : `Sitio clasificado como sospechoso por análisis multiminal. Dominio: ${hostname}.`;
+  } else {
+    document.getElementById('page-purpose-text').textContent = brand
+      ? `Portal sospechoso que suplanta la marca "${brand}". Dominio: ${hostname}. El modelo de IA detectó un ${(prob * 100).toFixed(0)}% de riesgo en este sitio.`
+      : `Sitio sospechoso detectado por análisis multiminal. Dominio: ${hostname}.`;
+  }
 
-        // Indicador inicial de carga mientras el servidor genera la captura con Playwright
-        previewContainer.className = 'preview-box';
-        previewContainer.style.padding = '32px 20px';
-        previewContainer.innerHTML = `
-          <div style="font-size: 30px; margin-bottom: 8px;">⏳</div>
-          <div class="preview-box-title" style="color: #334155; font-size: 15px;">Generando Captura Segura en Servidor...</div>
-          <div class="preview-box-desc" style="color: #64748b; font-size: 13px;">
-            El servidor está ejecutando el sitio en un entorno aislado con Playwright para capturar el diseño completo de forma 100% segura.
-          </div>
-        `;
-
-        fetch(screenshotUrl)
-          .then(async res => {
-            if (res.ok) {
-              previewContainer.classList.remove('preview-box');
-              previewContainer.style.padding = '0';
-              previewContainer.style.border = '1px solid #cbd5e1';
-              previewContainer.style.borderRadius = '10px';
-              previewContainer.style.overflow = 'hidden';
-              previewContainer.style.background = '#ffffff';
-              previewContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
-
-              previewContainer.innerHTML = `
-                <!-- Barra superior de navegador simulado -->
-                <div style="background: #0f172a; color: #94a3b8; font-size: 12px; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;">
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="display: flex; gap: 6px;">
-                      <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
-                      <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
-                      <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
-                    </div>
-                    <div style="background: #1e293b; padding: 3px 14px; border-radius: 6px; font-family: monospace; color: #e2e8f0; font-size: 11.5px; border: 1px solid #334155; max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      🔒 ${targetUrl}
-                    </div>
-                  </div>
-                  <div style="display: flex; gap: 8px;">
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11px;">Captura 100% Inerte</span>
-                    <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); font-size: 11px;">Playwright Headless</span>
-                  </div>
-                </div>
-
-                <!-- Visor de la imagen estática -->
-                <div style="max-height: 500px; overflow-y: auto; background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: center;">
-                  <img src="${screenshotUrl}" alt="Captura segura del sitio" style="width: 100%; height: auto; display: block;">
-                </div>
-
-                <!-- Pie informativo de seguridad -->
-                <div style="background: #f8fafc; padding: 10px 16px; font-size: 12px; color: #475569; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                  <span>🛡️ <b>Entorno Aislado:</b> El código JavaScript se ejecutó exclusivamente en el servidor. Tu equipo solo visualiza una imagen fotográfica estática.</span>
-                  <a href="${screenshotUrl}" target="_blank" style="color: #2563eb; font-weight: 500; font-size: 11.5px; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-                    Ver en tamaño completo ↗
-                  </a>
-                </div>
-              `;
-            } else {
-              // Si falla la captura (ej. dominio caído / DNS NXDOMAIN)
-              let errorReason = "El servidor remoto no respondió o el dominio no tiene resolución DNS activa.";
-              try {
-                const errData = await res.json();
-                if (errData && errData.detail && errData.detail.message) {
-                  errorReason = errData.detail.message;
-                }
-              } catch (e) {}
-
-              const analyzedDomain = document.getElementById('domain-val').textContent || targetUrl;
-              previewContainer.className = 'preview-box';
-              previewContainer.style.padding = '36px 20px';
-              previewContainer.innerHTML = `
-                <div style="font-size: 34px; margin-bottom: 10px;">🌐⚠️</div>
-                <div class="preview-box-title" style="color: #334155; font-size: 15px;">Sitio Inactivo o Dominio Fuera de Línea</div>
-                <div class="preview-box-desc" style="max-width: 520px; margin: 0 auto; color: #64748b; font-size: 13px; line-height: 1.5;">
-                  No se pudo generar la captura porque el servidor remoto de <b>${analyzedDomain}</b> no respondió a la conexión (sitio caído, suspendido o sin registros DNS).
-                  <br><span style="display: inline-block; margin-top: 8px; font-size: 11.5px; color: #94a3b8;">
-                    PhishGuard bloqueó el acceso preventivamente basándose en el análisis léxico y la detección de suplantación de la IA.
-                  </span>
-                </div>
-              `;
-            }
-          })
-          .catch(err => {
-            console.error('Error al solicitar captura de pantalla:', err);
-          });
-
-        // 7. Análisis Contextual en Profundidad y Escenarios de Riesgo
-        const purposeEl = document.getElementById('page-purpose-text');
-        const scenariosGrid = document.getElementById('scenarios-grid');
-
-        const brand = (llmDetails && llmDetails.brand_spoofed && llmDetails.brand_spoofed !== 'Desconocida') 
-          ? llmDetails.brand_spoofed 
-          : 'la entidad suplantada';
-
-        // 7.1 Propósito detectado de la página
-        if (llmDetails && llmDetails.page_purpose) {
-          purposeEl.textContent = llmDetails.page_purpose;
-        } else if (llmDetails && llmDetails.reason) {
-          purposeEl.textContent = `Este portal simula ser una interfaz de ${brand} diseñada para captar la atención del usuario mediante pretextos de acceso, verificación o transacciones fraudulentas.`;
-        } else {
-          purposeEl.textContent = `Portal sospechoso con estructura fraudulenta orientada a la extracción no autorizada de datos personales.`;
-        }
-
-        // 7.2 Escenarios de Ataque e Impacto
-        let scenarios = [];
-        if (llmDetails && Array.isArray(llmDetails.attack_scenarios) && llmDetails.attack_scenarios.length > 0) {
-          scenarios = llmDetails.attack_scenarios;
-        } else {
-          // Escenarios contextuales inferidos según la marca o tipo de servicio
-          const brandLower = brand.toLowerCase();
-          if (brandLower.includes('face') || brandLower.includes('insta') || brandLower.includes('meta') || brandLower.includes('social') || brandLower.includes('google') || brandLower.includes('tiktok')) {
-            scenarios = [
-              {
-                title: "Secuestro Total de Cuenta",
-                desc: "Los ciberdelincuentes obtienen control de tu perfil, fotos, mensajes privados y contraseñas de acceso."
-              },
-              {
-                title: "Fraude y Extorsión a Contactos",
-                desc: "Usan tu identidad para enviar mensajes urgentes a tus amigos o familiares pidiéndoles dinero o enviando malware."
-              },
-              {
-                title: "Compromiso de Cuentas Vinculadas",
-                desc: "Intentos automatizados de acceso a otros servicios o correos donde reutilices la misma contraseña."
-              }
-            ];
-          } else if (brandLower.includes('banco') || brandLower.includes('bbva') || brandLower.includes('interbank') || brandLower.includes('bcp') || brandLower.includes('scotia') || brandLower.includes('visa') || brandLower.includes('mastercard') || brandLower.includes('pay')) {
-            scenarios = [
-              {
-                title: "Robo de Fondos y Transferencias",
-                desc: "Captura inmediata de tus claves de acceso, token digital o números de tarjeta para vaciar tu saldo."
-              },
-              {
-                title: "Clonación de Tarjetas (Carding)",
-                desc: "Extracción del número de tarjeta, fecha de vencimiento y código CVV para realizar compras online no autorizadas."
-              },
-              {
-                title: "Suplantación para Préstamos Falsos",
-                desc: "Uso de tus datos personales para solicitar créditos o abrir cuentas falsas en entidades financieras."
-              }
-            ];
-          } else if (brandLower.includes('claro') || brandLower.includes('movistar') || brandLower.includes('entel') || brandLower.includes('telecom')) {
-            scenarios = [
-              {
-                title: "Robo de Línea Móvil (SIM Swapping)",
-                desc: "Intento de obtener datos suficientes para duplicar tu chip y desviar tus SMS de autenticación bancaria."
-              },
-              {
-                title: "Exfiltración de Datos de Facturación",
-                desc: "Acceso a historiales, nombres completos, números de documento (DNI) y domicilio para extorsiones dirigidas."
-              },
-              {
-                title: "Cargos Fraudulentos en Recibo",
-                desc: "Suscripción no autorizada a servicios premium con cargo directo a la línea telefónica."
-              }
-            ];
-          } else if (brandLower.includes('marvel') || brandLower.includes('crypto') || brandLower.includes('coin') || brandLower.includes('wallet') || brandLower.includes('token') || brandLower.includes('nft') || brandLower.includes('binance') || brandLower.includes('metamask')) {
-            scenarios = [
-              {
-                title: "Drenado de Billetera (Wallet Drainer)",
-                desc: "La firma de transacciones falsas otorga permisos para vaciar automáticamente tus tokens USDT, ETH y criptomonedas."
-              },
-              {
-                title: "Pérdida Irreversible de Activos",
-                desc: "En la red blockchain las transferencias son definitivas y anónimas; los fondos no pueden ser devueltos ni cancelados."
-              },
-              {
-                title: "Compromiso de Frase Semilla",
-                desc: "Si solicitan tus 12 o 24 palabras de recuperación, los atacantes se adueñan permanentemente de tu billetera."
-              }
-            ];
-          } else {
-            scenarios = [
-              {
-                title: "Captura y Registro de Datos",
-                desc: "Cualquier texto, credencial o documento introducido en los formularios es grabado por el servidor del atacante."
-              },
-              {
-                title: "Comercialización en Mercados Ilícitos",
-                desc: "Tus datos personales pueden ser vendidos a terceros para campañas de spam, fraude y extorsión."
-              },
-              {
-                title: "Ataque en Cascada (Credential Stuffing)",
-                desc: "Pruebas masivas con robots para vulnerar tus otras cuentas utilizando la misma combinación de correo y clave."
-              }
-            ];
-          }
-        }
-
-        const escapeHtml = (value) => String(value ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-
-        // Gemini may return each scenario as plain text, while the built-in
-        // fallback uses {title, desc}. Normalize both formats for the UI.
-        const normalizedScenarios = scenarios.map((scenario, index) => {
-          if (typeof scenario === 'string') {
-            return { title: `Posible consecuencia ${index + 1}`, desc: scenario };
-          }
-          return {
-            title: scenario && scenario.title ? scenario.title : `Posible consecuencia ${index + 1}`,
-            desc: scenario && scenario.desc ? scenario.desc : 'No se proporcionaron detalles adicionales.'
-          };
+  // Scenario cards
+  const scenariosGrid = document.getElementById('scenarios-grid');
+  if (scenariosGrid) {
+    const scenarios = [];
+    if (isWarning && hasBmData) {
+      if (bmDifferentEntity) {
+        scenarios.push({
+          title: `${bmName} — Distinto país`,
+          desc: `Este sitio (${hostname}) es seguro pero es de otro país. Si buscas ${bmName} de tu país, visita ${bmDomain}.`,
+          highlight: true
         });
-
-        if (scenariosGrid) {
-          scenariosGrid.innerHTML = normalizedScenarios.map((sc, idx) => `
-            <div class="scenario-item">
-              <div class="scenario-badge">${idx + 1}</div>
-              <div class="scenario-content">
-                <span class="scenario-title">${escapeHtml(sc.title)}</span>
-                <p class="scenario-desc">${escapeHtml(sc.desc)}</p>
-              </div>
-            </div>
-          `).join('');
-        }
-      })
-      .catch(err => {
-        console.error('Error cargando detalles del trabajo:', err);
+      } else {
+        scenarios.push({
+          title: `${bmName} — Fuera de tu región`,
+          desc: `Estás visitando ${hostname}, que es la versión de ${bmName} para otro país. La versión de tu país es ${bmDomain}. ${bmSuggestion || ''}`,
+          highlight: true
+        });
+      }
+    } else if (isWarning && brand) {
+      scenarios.push({
+        title: `${brand} — Fuera de región`,
+        desc: `Estás visitando la versión de ${brand} para otro país. Verifica que sea la versión correcta para tu ubicación.`,
+        highlight: true
       });
+    } else if (brand) {
+      scenarios.push({
+        title: `Suplantación de ${brand}`,
+        desc: `El dominio imita la marca "${brand}" mediante typosquatting. Los usuarios podrían confundirlo con el sitio legítimo y ingresar credenciales.`
+      });
+    } else {
+      scenarios.push({
+        title: 'Análisis de riesgo por IA',
+        desc: `El modelo multiminal detectó patrones anómalos en "${hostname}" con un score de riesgo del ${(prob * 100).toFixed(0)}%.`
+      });
+    }
+    scenariosGrid.innerHTML = scenarios.map((s, i) => `
+      <div class="scenario-item" ${s.highlight ? 'style="background:#eff6ff;border-color:#93c5fd;"' : ''}>
+        <div class="scenario-badge" ${s.highlight ? 'style="background:#dbeafe;color:#2563eb;"' : ''}>${i + 1}</div>
+        <div class="scenario-content">
+          <span class="scenario-title">${s.title}</span>
+          <p class="scenario-desc">${s.desc}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Load screenshot preview for ALL scenarios (phishing, warning, legitimate)
+  {
+    const ANALYSES_ENDPOINT = 'http://localhost:8080/analyses';
+    const previewContainer = document.getElementById('preview-container');
+    
+    previewContainer.innerHTML = `
+      <div style="font-size: 30px; margin-bottom: 8px;">⏳</div>
+      <div class="preview-box-title" style="color: #334155; font-size: 15px;">Generando Captura Segura...</div>
+      <div class="preview-box-desc" style="color: #64748b; font-size: 13px;">
+        El servidor está capturando el sitio en un entorno aislado.
+      </div>
+    `;
+
+    fetch(ANALYSES_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url })
+    })
+    .then(res => res.json())
+    .then(job => {
+      const pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${ANALYSES_ENDPOINT}/${job.id}`);
+          const data = await response.json();
+          
+          if (data.status === 'completed' || data.status === 'failed') {
+            clearInterval(pollInterval);
+            
+            if (data.status === 'completed') {
+              const screenshotUrl = `${ANALYSES_ENDPOINT.replace('/analyses', '')}/screenshots/${job.id}.png`;
+              previewContainer.className = '';
+              previewContainer.style.padding = '0';
+            previewContainer.style.border = '1px solid #cbd5e1';
+            previewContainer.style.borderRadius = '10px';
+            previewContainer.style.overflow = 'hidden';
+            previewContainer.style.background = '#ffffff';
+            previewContainer.innerHTML = `
+              <div style="background: #0f172a; color: #94a3b8; font-size: 12px; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;">
+                <div style="background: #1e293b; padding: 3px 14px; border-radius: 6px; font-family: monospace; color: #e2e8f0; font-size: 11.5px; border: 1px solid #334155;">
+                  🔒 ${url}
+                </div>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11px;">Captura Inerte</span>
+              </div>
+              <div style="max-height: 500px; overflow-y: auto; background: #f8fafc; text-align: center;">
+                <img id="screenshot-img" src="${screenshotUrl}" alt="Captura del sitio" style="width: 100%; height: auto; display: block;">
+              </div>
+              <div style="background: #f8fafc; padding: 10px 16px; font-size: 12px; color: #475569;">
+                🛡️ <b>Entorno Aislado:</b> Imagen estática generada por Playwright. Sin scripts activos.
+              </div>
+            `;
+            const img = document.getElementById('screenshot-img');
+            if (img) {
+              img.addEventListener('error', () => {
+                img.parentElement.innerHTML = '<div style="padding:40px;color:#64748b">No se pudo cargar la captura</div>';
+              });
+            }
+          } else {
+            previewContainer.className = 'preview-box';
+            previewContainer.innerHTML = `
+              <div style="font-size: 34px; margin-bottom: 10px;">🌐⚠️</div>
+              <div class="preview-box-title" style="color: #334155;">Sitio Inactivo o Fuera de Línea</div>
+              <div class="preview-box-desc" style="color: #64748b;">No se pudo capturar. El dominio puede estar caído o sin DNS.</div>
+            `;
+          }
+        }
+      } catch (e) {
+        clearInterval(pollInterval);
+      }
+    }, 2000);
+
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (previewContainer.querySelector('.preview-box-title')?.textContent.includes('Generando')) {
+        previewContainer.className = 'preview-box';
+        previewContainer.innerHTML = `
+          <div style="font-size: 34px; margin-bottom: 10px;">🌐⚠️</div>
+          <div class="preview-box-title" style="color: #334155;">Tiempo de espera agotado</div>
+          <div class="preview-box-desc" style="color: #64748b;">El sitio puede estar inactivo o sin resolución DNS.</div>
+        `;
+      }
+    }, 30000);
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    previewContainer.className = 'preview-box';
+    previewContainer.innerHTML = `
+      <div style="font-size: 34px; margin-bottom: 10px;">📷</div>
+      <div class="preview-box-title" style="color: #334155;">Vista previa no disponible</div>
+      <div class="preview-box-desc" style="color: #64748b;">No se pudo conectar con el servidor.</div>
+    `;
   });
 }
+}
+
+// Build dynamic attack scenarios from rules
+function buildScenarios(url, brand, allRules, brandMismatch, decisionType) {
+  const scenarios = [];
+
+  const bm = brandMismatch;
+  const mismatchRule = allRules.find(r => r.rule === 'brand_country_mismatch');
+  const brandMatch = bm || (mismatchRule?.triggered ? mismatchRule.details : null);
+
+  if (decisionType === 'warning' && brandMatch) {
+    if (bmDifferentEntity) {
+      scenarios.push({
+        title: `${brandMatch.brand_full_name} — Distinto país`,
+        desc: `Este sitio (${brandMatch.current_domain || url}) es seguro pero es de otro país. Si buscas ${brandMatch.brand_full_name} de tu país, visita ${brandMatch.local_domain}.`,
+        highlight: true
+      });
+    } else {
+      scenarios.push({
+        title: `${brandMatch.brand_full_name} — Fuera de tu región`,
+        desc: `Estás visitando ${brandMatch.current_domain || 'este dominio'}, que es la versión de ${brandMatch.brand_full_name} para otro país. La versión de tu país es ${brandMatch.local_domain}.`,
+        highlight: true
+      });
+    }
+  } else if (brandMatch) {
+    scenarios.push({
+      title: `${brandMatch.brand_full_name} — Versión incorrecta`,
+      desc: `Estás visitando ${brandMatch.current_domain || 'este dominio'}, pero la versión local para tu país es ${brandMatch.local_domain}. ${brandMatch.suggestion || ''}.`,
+      highlight: true
+    });
+  }
+
+  if (brand && !brandMatch) {
+    scenarios.push({
+      title: `Suplantación de ${brand}`,
+      desc: `El dominio imita la marca "${brand}" mediante typosquatting. Los usuarios podrían confundirlo con el sitio legítimo y ingresar credenciales.`
+    });
+  }
+
+  // Financial phishing scenario
+  const financialRule = allRules.find(r => r.rule === 'financial_phishing');
+  if (financialRule?.triggered && financialRule.details) {
+    const d = financialRule.details;
+    if (d.type === 'brand_impersonation') {
+      scenarios.push({
+        title: `Phishing financiero: ${d.brand || 'institución'}`,
+        desc: `Se detectó suplantación de ${d.brand || 'una institución financiera'} (${d.category || 'banco'}). Este tipo de ataque busca robar credenciales bancarias, datos de tarjetas y documentos de identidad.`,
+        highlight: true
+      });
+    } else if (d.type === 'keyword_pattern') {
+      scenarios.push({
+        title: 'Patrón de phishing financiero detectado',
+        desc: `La URL contiene ${d.keywords?.length || 0} términos financieros sospechosos (${(d.keywords || []).slice(0, 4).join(', ')}). Sitios legítimos de bancos no usan estas rutas en URLs públicas.`
+      });
+    }
+  }
+
+  const geoRule = allRules.find(r => r.rule === 'server_geolocation');
+  if (geoRule?.triggered && geoRule.details) {
+    scenarios.push({
+      title: `Servidor en ${geoRule.details.country}`,
+      desc: `El sitio opera desde ${geoRule.details.country} (${geoRule.details.country_code}), una región con alta prevalencia de campañas de phishing. ISP: ${geoRule.details.isp || 'desconocido'}.`
+    });
+  }
+
+  const ageRule = allRules.find(r => r.rule === 'domain_age');
+  if (ageRule?.triggered && ageRule.details) {
+    scenarios.push({
+      title: `Dominio recién registrado (${ageRule.details.age_days} días)`,
+      desc: `El dominio fue registrado hace apenas ${ageRule.details.age_days} días. Los dominios nuevos son frecuentemente utilizados en campañas de phishing activas.`
+    });
+  }
+
+  const tldRule = allRules.find(r => r.rule === 'suspicious_tld' || r.rule === 'country_code_tld');
+  if (tldRule?.triggered && tldRule.details) {
+    scenarios.push({
+      title: `TLD de riesgo: .${tldRule.details.tld}`,
+      desc: `El dominio utiliza .${tldRule.details.tld}, un TLD frecuentemente abusado por su bajo costo y mínima verificación de registro.`
+    });
+  }
+
+  const pathRule = allRules.find(r => r.rule === 'suspicious_path');
+  if (pathRule?.triggered && pathRule.details) {
+    const kws = pathRule.details.keywords?.join(', ') || '';
+    scenarios.push({
+      title: 'Ruta sospechosa detectada',
+      desc: `La URL contiene términos asociados a robo de credenciales: ${kws}. Estas rutas simulan páginas de login legítimas.`
+    });
+  }
+
+  const ipRule = allRules.find(r => r.rule === 'ip_address');
+  if (ipRule?.triggered) {
+    scenarios.push({
+      title: 'IP directa en lugar de dominio',
+      desc: 'El sitio usa una dirección IP numérica en lugar de un nombre de dominio, técnica común para evadir bloqueos y filtros.'
+    });
+  }
+
+  const shortenerRule = allRules.find(r => r.rule === 'url_shortener');
+  if (shortenerRule?.triggered) {
+    scenarios.push({
+      title: 'Acortador de URLs detectado',
+      desc: 'Se utilizó un servicio de acortamiento de URLs para ocultar el destino real, una técnica habitual en campañas de phishing.'
+    });
+  }
+
+  if (scenarios.length === 0) {
+    const riskPct = (parseFloat(probability) * 100).toFixed(0);
+    const hostname = (() => { try { return new URL(url).hostname; } catch(e) { return url; } })();
+    const mismatchRule = allRules.find(r => r.rule === 'brand_country_mismatch');
+
+    if (mismatchRule?.details) {
+      const d = mismatchRule.details;
+      scenarios.push({
+        title: `${d.brand_full_name} — Análisis de riesgo`,
+        desc: `El modelo de IA detectó un ${riskPct}% de riesgo en "${hostname}". Este dominio fue analizado por sus patrones de similitud con ${d.brand_full_name} (${d.category || 'institución financiera'}). Servidor en ${d.server_country_name || 'ubicación no determinada'}.`,
+        highlight: true
+      });
+    } else {
+      scenarios.push({
+        title: 'Análisis de riesgo por IA',
+        desc: `El modelo multiminal detectó patrones anómalos en "${hostname}" con un score de riesgo del ${riskPct}%. Se analizó la estructura del dominio, la geolocalización del servidor y la edad del dominio.`
+      });
+    }
+
+    if (geoRule?.details?.country) {
+      scenarios.push({
+        title: `Servidor en ${geoRule.details.country}`,
+        desc: `El dominio ${hostname} resuelve a un servidor ubicado en ${geoRule.details.country} (${geoRule.details.country_code || ''}). ISP: ${geoRule.details.isp || 'desconocido'}.`
+      });
+    }
+  }
+
+  return scenarios;
+}
+
+// Build dynamic purpose text
+function buildPurpose(url, brand, allRules, brandMismatch, decisionType) {
+  const triggeredNames = allRules.filter(r => r.triggered).map(r => r.rule);
+  const hostname = (() => { try { return new URL(url).hostname; } catch(e) { return url; } })();
+  const prob = parseFloat(probability);
+  const riskPct = (prob * 100).toFixed(0);
+
+  const bm = brandMismatch;
+  const mismatchRule = allRules.find(r => r.rule === 'brand_country_mismatch');
+  const brandMatch = bm || (mismatchRule?.triggered ? mismatchRule.details : null);
+
+  if (decisionType === 'warning' && brandMatch) {
+    return bmDifferentEntity
+      ? `Este sitio coincide con la marca ${brandMatch.brand_full_name} pero es de otro país. Estás visitando ${hostname} y la versión local es ${brandMatch.local_domain}.`
+      : `Este sitio pertenece a ${brandMatch.brand_full_name} (${brandMatch.category || 'institución financiera'}) pero no es la versión de tu país. Estás visitando ${hostname} y la versión local es ${brandMatch.local_domain}.`;
+  }
+
+  if (brandMatch) {
+    return `Estás visitando ${hostname}, que pertenece a ${brandMatch.brand_full_name} (${brandMatch.category || 'institución'}). La versión de tu país es ${brandMatch.local_domain}. El modelo de IA asignó un ${riskPct}% de riesgo.`;
+  }
+
+  if (brand) {
+    return `Portal sospechoso que suplanta la marca "${brand}". Dominio: ${hostname}. El modelo de IA detectó un ${riskPct}% de riesgo en este sitio.`;
+  }
+
+  // Generic but informative
+  const geoRule = allRules.find(r => r.rule === 'server_geolocation');
+  const ageRule = allRules.find(r => r.rule === 'domain_age');
+
+  let text = `Sitio clasificado como sospechoso por análisis multiminal. Dominio: ${hostname}. `;
+  text += `El modelo de IA asignó un ${riskPct}% de probabilidad de ser phishing.`;
+
+  if (geoRule?.details?.country) {
+    text += ` Servidor ubicado en ${geoRule.details.country}.`;
+  }
+  if (ageRule?.details?.age_days) {
+    text += ` Dominio registrado hace ${ageRule.details.age_days} días.`;
+  }
+  if (triggeredNames.length > 0) {
+    text += ` Reglas activadas: ${triggeredNames.join(', ')}.`;
+  }
+  return text;
+}
+
+// Build dynamic recommendation
+function buildRecommendation(prob, brand, allRules, brandMismatch, decisionType) {
+  const parts = [];
+  const riskPct = (prob * 100).toFixed(0);
+
+  const bm = brandMismatch;
+  const mismatchRule = allRules.find(r => r.rule === 'brand_country_mismatch');
+  // Only use brand info if API sent brand_mismatch (rule triggered) or rule is triggered
+  const brandMatch = bm || (mismatchRule?.triggered ? mismatchRule.details : null);
+
+  if (decisionType === 'warning' && brandMatch) {
+    if (bmDifferentEntity) {
+      parts.push(`Este sitio es seguro pero es de otro país. Si buscas ${brandMatch.brand_full_name} de tu país, te recomendamos visitar ${brandMatch.local_domain}.`);
+    } else {
+      parts.push(`Si buscas ${brandMatch.brand_full_name}, te recomendamos visitar ${brandMatch.local_domain} directamente.`);
+      parts.push(`Estás en la versión de ${brandMatch.brand_full_name} para otro país, no para el tuyo.`);
+    }
+    return parts.join(' ');
+  }
+
+  // Brand-country mismatch suggestion
+  if (brandMatch) {
+    if (brandMatch.local_domain) {
+      parts.push(`Si buscas ${brandMatch.brand_full_name}, te recomendamos visitar ${brandMatch.local_domain} directamente.`);
+    }
+    parts.push(`Estás visitando ${brandMatch.current_domain || 'un dominio diferente'}, pero la versión de tu país es ${brandMatch.local_domain}.`);
+  }
+
+  // Financial-specific warning
+  const financialRule = allRules.find(r => r.rule === 'financial_phishing');
+  if (financialRule?.triggered && financialRule.details) {
+    const d = financialRule.details;
+    if (d.type === 'brand_impersonation') {
+      parts.push(`ATENCIÓN: Este sitio suplanta una institución financiera (${d.brand || 'banco'}). Nunca ingreses credenciales bancarias.`);
+    } else {
+      parts.push(`La URL contiene términos financieros sospechosos. No ingresas datos bancarios.`);
+    }
+  }
+
+  // Context-specific recommendations based on risk level
+  if (prob >= 0.8) {
+    parts.push(`Este sitio tiene un riesgo MUY ALTO (${riskPct}%). No ingreses ningún dato personal ni financiero.`);
+  } else if (prob >= 0.6) {
+    parts.push(`Este sitio tiene un riesgo alto (${riskPct}%). Evita ingresar credenciales o datos sensibles.`);
+  } else {
+    parts.push(`Este sitio tiene un riesgo moderado (${riskPct}%). No ingreses credenciales ni datos personales.`);
+  }
+
+  parts.push('Si necesitas acceder a este servicio, busca el sitio oficial en tu buscador o utiliza la app oficial.');
+  return parts.join(' ');
+}
+
+// Load geolocation, domain age, scenarios, purpose, recommendation from rules_analysis
+function loadRulesData(url) {
+  if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+
+  const storageKey = `rules_${url}`;
+  const brandMismatchKey = `brand_mismatch_${url}`;
+  chrome.storage.local.get([storageKey, brandMismatchKey]).then((data) => {
+    const rulesAnalysis = data[storageKey];
+    const brandMismatch = data[brandMismatchKey];
+    
+    if (!rulesAnalysis || !rulesAnalysis.all_rules) {
+      // Retry once after 1 second (data might not have been written yet)
+      setTimeout(() => {
+        chrome.storage.local.get([storageKey, brandMismatchKey]).then((retryData) => {
+          const retryRules = retryData[storageKey];
+          const retryBm = retryData[brandMismatchKey];
+          if (retryRules && retryRules.all_rules) {
+            applyRulesData(retryRules, retryBm, url);
+          }
+        });
+      }, 1000);
+      return;
+    }
+
+    applyRulesData(rulesAnalysis, brandMismatch, url);
+  }).catch(() => {});
+}
+
+function applyRulesData(rulesAnalysis, brandMismatch, url) {
+    const allRules = rulesAnalysis.all_rules;
+    const geoEl = document.getElementById('geo-val');
+    const ageEl = document.getElementById('age-val');
+
+    for (const rule of allRules) {
+      if (rule.rule === 'server_geolocation' && rule.details) {
+        const d = rule.details;
+        if (rule.triggered) {
+          geoEl.textContent = `${d.country} (${d.country_code})`;
+          geoEl.className = d.risk_level === 'high' ? 'badge badge-danger' : 'badge badge-warning';
+        } else if (d.country) {
+          geoEl.textContent = `${d.country} (${d.country_code})`;
+          geoEl.className = 'badge badge-neutral';
+        }
+      }
+
+      if (rule.rule === 'domain_age') {
+        if (ageEl) {
+          if (rule.details && rule.details.age_days) {
+            ageEl.textContent = `${rule.details.age_days} días`;
+            ageEl.className = rule.triggered
+              ? (rule.details.risk_level === 'critical' || rule.details.risk_level === 'high' ? 'badge badge-danger' : 'badge badge-warning')
+              : 'badge badge-neutral';
+          } else {
+            ageEl.textContent = 'No disponible';
+            ageEl.className = 'badge badge-neutral';
+          }
+        }
+      }
+    }
+
+    // Update dynamic sections
+    const brand = extractBrandFromUrl(url);
+
+    const purposeEl = document.getElementById('page-purpose-text');
+    const recEl = document.getElementById('rec-value');
+    const gridEl = document.getElementById('scenarios-grid');
+
+    if (purposeEl) purposeEl.textContent = buildPurpose(url, brand, allRules, brandMismatch, decisionType);
+    if (recEl) recEl.textContent = buildRecommendation(parseFloat(probability), brand, allRules, brandMismatch, decisionType);
+
+    const scenarios = buildScenarios(url, brand, allRules, brandMismatch, decisionType);
+    if (gridEl && scenarios.length > 0) {
+      gridEl.innerHTML = scenarios.map((s, i) => `
+        <div class="scenario-item" ${s.highlight ? 'style="background:#eff6ff;border-color:#93c5fd;"' : ''}>
+          <div class="scenario-badge" ${s.highlight ? 'style="background:#dbeafe;color:#2563eb;"' : ''}>${i + 1}</div>
+          <div class="scenario-content">
+            <span class="scenario-title">${s.title}</span>
+            <p class="scenario-desc">${s.desc}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Clean up stored data
+    chrome.storage.local.remove(`rules_${url}`);
+}
+
+// Main logic: use jobId or direct probability
+if (probability) {
+  // Direct from /check endpoint
+  populateWithCheckData(parseFloat(probability), targetUrl);
+} else if (jobId) {
+  // Legacy: fetch from /analyses endpoint
+  const endpoint = 'http://localhost:8080/analyses';
+  fetch(`${endpoint}/${jobId}`)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.url) {
+        targetUrl = targetUrl || data.url;
+        document.getElementById('url-display').textContent = data.url;
+        try {
+          const u = new URL(data.url);
+          document.getElementById('domain-val').textContent = u.hostname;
+          const isHttps = u.protocol === 'https:';
+          const sslEl = document.getElementById('ssl-val');
+          sslEl.textContent = isHttps ? 'HTTPS Cifrado' : 'HTTP No Seguro';
+          sslEl.className = isHttps ? 'badge badge-warning' : 'badge badge-danger';
+        } catch (e) {
+          document.getElementById('domain-val').textContent = data.url;
+        }
+      }
+
+      const prob = Number(data.probability ?? 1.0);
+      populateWithCheckData(prob, data.url || targetUrl);
+    })
+    .catch(err => {
+      console.error('Error loading job details:', err);
+      // Fallback: show with high risk
+      populateWithCheckData(1.0, targetUrl);
+    });
+} else {
+  // No probability or jobId: default to high risk
+  populateWithCheckData(1.0, targetUrl);
+}
+} // end if (!isPending)

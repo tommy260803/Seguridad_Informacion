@@ -482,6 +482,16 @@
       .warning-banner { flex-direction: column; }
       .risk-level-box { text-align: left; border-left: none; padding-left: 0; border-top: 1px solid var(--danger-border); padding-top: 16px; }
     }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -542,6 +552,14 @@
         <div class="detail-row">
           <span class="detail-label">🔒 Protocolo / SSL</span>
           <span class="badge badge-warning" id="ssl-val">Verificando...</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">📍 Ubicación del Servidor</span>
+          <span class="badge badge-neutral" id="geo-val">Verificando...</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">📅 Edad del Dominio</span>
+          <span class="badge badge-neutral" id="age-val">Verificando...</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">⚠️ Tipo de Amenaza</span>

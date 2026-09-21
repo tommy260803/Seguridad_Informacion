@@ -8,6 +8,27 @@
     <section id="result" aria-live="polite"><p>Analiza la pestaña activa para consultar el backend seguro.</p></section>
     <button id="analyze" type="button">Analizar pestaña</button>
     <button id="forget-site" type="button" class="secondary">Olvidar esta página y volver a analizar</button>
+    <button id="clear-all" type="button" class="danger">Limpiar todos los permisos guardados</button>
+    <label>País
+      <select id="country" autocomplete="off">
+        <option value="">Detectar automáticamente</option>
+        <option value="PERU">Perú</option>
+        <option value="MEXICO">México</option>
+        <option value="COLOMBIA">Colombia</option>
+        <option value="CHILE">Chile</option>
+        <option value="ARGENTINA">Argentina</option>
+        <option value="BRASIL">Brasil</option>
+        <option value="ECUADOR">Ecuador</option>
+        <option value="BOLIVIA">Bolivia</option>
+        <option value="PANAMA">Panamá</option>
+        <option value="COSTA_RICA">Costa Rica</option>
+        <option value="GUATEMALA">Guatemala</option>
+        <option value="HONDURAS">Honduras</option>
+        <option value="EL_SALVADOR">El Salvador</option>
+        <option value="REPUBLICA_DOMINICANA">República Dominicana</option>
+      </select>
+    </label>
+    <button id="save-country" type="button" class="secondary">Guardar país</button>
     <label>Endpoint <input id="endpoint" type="url" autocomplete="off"></label>
     <button id="save" type="button" class="secondary">Guardar endpoint</button>
   </main>

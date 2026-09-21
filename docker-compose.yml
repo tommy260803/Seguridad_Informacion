@@ -64,6 +64,8 @@
       BROWSER_WORKER_TIMEOUT_SECONDS: "15"
     volumes:
       - ./src:/app/src
+      - ./configs:/app/configs
+      - ./data:/app/data
       - ./artifacts:/app/artifacts
       - /var/run/docker.sock:/var/run/docker.sock # Acceso estricto solo para el manager
 

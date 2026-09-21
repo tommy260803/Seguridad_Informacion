@@ -1,0 +1,673 @@
+{
+  "_comment": "Base de conocimiento financiero para deteccion de phishing bancario en LATAM.",
+  "_version": "1.0.0",
+  "categories": {
+    "bank": "Banco",
+    "fintech": "Fintech / Neobanco",
+    "payments": "Pagos / Billetera digital",
+    "insurance": "Seguros",
+    "broker": "Bolsa / Inversiones",
+    "lending": "Financiera / Credito",
+    "gov_financial": "Entidad regulatoria financiera"
+  },
+  "brands": {
+    "PERU": {
+      "bcp": {
+        "category": "bank",
+        "full_name": "Banco de Credito del Peru",
+        "local_domain": "viabcp.com"
+      },
+      "interbank": {
+        "category": "bank",
+        "full_name": "Interbank",
+        "local_domain": "interbank.com.pe"
+      },
+      "bbva_pe": {
+        "category": "bank",
+        "full_name": "BBVA Peru",
+        "local_domain": "bbva.pe"
+      },
+      "scotiabank_pe": {
+        "category": "bank",
+        "full_name": "Scotiabank Peru",
+        "local_domain": "scotiabank.com.pe"
+      },
+      "mibanco": {
+        "category": "bank",
+        "full_name": "MiBanco",
+        "local_domain": "mibanco.com.pe"
+      },
+      "banco_falabella_pe": {
+        "category": "bank",
+        "full_name": "Banco Falabella Peru",
+        "local_domain": "bancofalabella.com"
+      },
+      "banco_ripley_pe": {
+        "category": "bank",
+        "full_name": "Banco Ripley Peru",
+        "local_domain": "bancoripley.com.pe"
+      },
+      "gnb_sudameris": {
+        "category": "bank",
+        "full_name": "GNB Sudameris",
+        "local_domain": "gnb.com.pe"
+      },
+      "credicoop_pe": {
+        "category": "bank",
+        "full_name": "Credicoop",
+        "local_domain": "credicoop.com.pe"
+      },
+      "financiera_oh": {
+        "category": "lending",
+        "full_name": "Financiera Oh",
+        "local_domain": "oh.com.pe"
+      },
+      "financiera_cfn": {
+        "category": "lending",
+        "full_name": "CFN",
+        "local_domain": "cfn.com.pe"
+      },
+      "interseguro": {
+        "category": "insurance",
+        "full_name": "Interseguro",
+        "local_domain": "interseguro.com.pe"
+      },
+      "la_positiva": {
+        "category": "insurance",
+        "full_name": "La Positiva Seguros",
+        "local_domain": "lapositiva.com.pe"
+      },
+      "rimac": {
+        "category": "insurance",
+        "full_name": "Rimac Seguros",
+        "local_domain": "rimac.com.pe"
+      },
+      "pacifico_seguros": {
+        "category": "insurance",
+        "full_name": "Pacifico Seguros",
+        "local_domain": "pacifico.com.pe"
+      },
+      "sunat": {
+        "category": "gov_financial",
+        "full_name": "SUNAT",
+        "local_domain": "sunat.gob.pe"
+      },
+      "sbs": {
+        "category": "gov_financial",
+        "full_name": "SBS",
+        "local_domain": "sbs.gob.pe"
+      },
+      "smv": {
+        "category": "gov_financial",
+        "full_name": "SMV",
+        "local_domain": "smv.gob.pe"
+      }
+    },
+    "MEXICO": {
+      "bbva_mx": {
+        "category": "bank",
+        "full_name": "BBVA Mexico",
+        "local_domain": "bbva.mx"
+      },
+      "banamex": {
+        "category": "bank",
+        "full_name": "Citibanamex",
+        "local_domain": "banamex.com"
+      },
+      "banorte": {
+        "category": "bank",
+        "full_name": "Banorte",
+        "local_domain": "banorte.com"
+      },
+      "scotiabank_mx": {
+        "category": "bank",
+        "full_name": "Scotiabank Mexico",
+        "local_domain": "scotiabank.com.mx"
+      },
+      "hsbc_mx": {
+        "category": "bank",
+        "full_name": "HSBC Mexico",
+        "local_domain": "hsbc.com.mx"
+      },
+      "santander_mx": {
+        "category": "bank",
+        "full_name": "Santander Mexico",
+        "local_domain": "santander.com.mx"
+      },
+      "inbursa": {
+        "category": "bank",
+        "full_name": "Inbursa",
+        "local_domain": "inbursa.com"
+      },
+      "hey_banco": {
+        "category": "fintech",
+        "full_name": "Hey Banco",
+        "local_domain": "heybanco.com"
+      },
+      "kueski": {
+        "category": "fintech",
+        "full_name": "Kueski",
+        "local_domain": "kueski.com"
+      },
+      "nu_mx": {
+        "category": "fintech",
+        "full_name": "Nu Mexico",
+        "local_domain": "nu.mx"
+      },
+      "rappi_mx": {
+        "category": "payments",
+        "full_name": "RappiPay Mexico",
+        "local_domain": "rappi.com"
+      },
+      "mercadopago_mx": {
+        "category": "payments",
+        "full_name": "Mercado Pago Mexico",
+        "local_domain": "mercadopago.com.mx"
+      }
+    },
+    "COLOMBIA": {
+      "bancolombia": {
+        "category": "bank",
+        "full_name": "Bancolombia",
+        "local_domain": "bancolombia.com"
+      },
+      "davivienda": {
+        "category": "bank",
+        "full_name": "Davivienda",
+        "local_domain": "davivienda.com"
+      },
+      "banco_de_bogota": {
+        "category": "bank",
+        "full_name": "Banco de Bogota",
+        "local_domain": "banco bogota.com"
+      },
+      "banco_av_villas": {
+        "category": "bank",
+        "full_name": "Banco AV Villas",
+        "local_domain": "bancoavvillas.com.co"
+      },
+      "daviplata": {
+        "category": "fintech",
+        "full_name": "Daviplata",
+        "local_domain": "daviplata.com"
+      },
+      "nequi": {
+        "category": "payments",
+        "full_name": "Nequi",
+        "local_domain": "nequi.com.co"
+      },
+      "rappipay_co": {
+        "category": "payments",
+        "full_name": "RappiPay Colombia",
+        "local_domain": "rappi.com"
+      },
+      "mercadopago_co": {
+        "category": "payments",
+        "full_name": "Mercado Pago Colombia",
+        "local_domain": "mercadopago.com.co"
+      },
+      "nu_co": {
+        "category": "fintech",
+        "full_name": "Nu Colombia",
+        "local_domain": "nu.com.co"
+      },
+      "bold_co": {
+        "category": "payments",
+        "full_name": "Bold",
+        "local_domain": "bold.co"
+      },
+      "addi": {
+        "category": "lending",
+        "full_name": "Addi",
+        "local_domain": "addi.co"
+      }
+    },
+    "CHILE": {
+      "banco_de_chile": {
+        "category": "bank",
+        "full_name": "Banco de Chile",
+        "local_domain": "bancochile.cl"
+      },
+      "bci": {
+        "category": "bank",
+        "full_name": "BCI",
+        "local_domain": "bci.cl"
+      },
+      "bancoestado": {
+        "category": "bank",
+        "full_name": "BancoEstado",
+        "local_domain": "bancoestado.cl"
+      },
+      "itau_cl": {
+        "category": "bank",
+        "full_name": "Itau Chile",
+        "local_domain": "itau.cl"
+      },
+      "santander_cl": {
+        "category": "bank",
+        "full_name": "Santander Chile",
+        "local_domain": "santander.cl"
+      },
+      "scotiabank_cl": {
+        "category": "bank",
+        "full_name": "Scotiabank Chile",
+        "local_domain": "scotiabank.cl"
+      },
+      "falabella_cl": {
+        "category": "bank",
+        "full_name": "Banco Falabella Chile",
+        "local_domain": "falabella.cl"
+      },
+      "ripley_cl": {
+        "category": "bank",
+        "full_name": "Banco Ripley Chile",
+        "local_domain": "banco ripley.cl"
+      },
+      "cmr_cl": {
+        "category": "payments",
+        "full_name": "CMR Falabella",
+        "local_domain": "cmrfalabella.com"
+      },
+      "nu_cl": {
+        "category": "fintech",
+        "full_name": "Nu Chile",
+        "local_domain": "nu.cl"
+      },
+      "mach": {
+        "category": "fintech",
+        "full_name": "MACH",
+        "local_domain": "mach.cl"
+      }
+    },
+    "ARGENTINA": {
+      "galicia_ar": {
+        "category": "bank",
+        "full_name": "Banco Galicia",
+        "local_domain": "galicia.com.ar"
+      },
+      "naranja": {
+        "category": "bank",
+        "full_name": "Naranja",
+        "local_domain": "naranja.com.ar"
+      },
+      "macro_ar": {
+        "category": "bank",
+        "full_name": "Banco Macro",
+        "local_domain": "macro.com.ar"
+      },
+      "santander_ar": {
+        "category": "bank",
+        "full_name": "Santander Argentina",
+        "local_domain": "santander.com.ar"
+      },
+      "bbva_ar": {
+        "category": "bank",
+        "full_name": "BBVA Argentina",
+        "local_domain": "bbva.com.ar"
+      },
+      "hsbc_ar": {
+        "category": "bank",
+        "full_name": "HSBC Argentina",
+        "local_domain": "hsbc.com.ar"
+      },
+      "brubank": {
+        "category": "fintech",
+        "full_name": "Brubank",
+        "local_domain": "brubank.com.ar"
+      },
+      "uala": {
+        "category": "fintech",
+        "full_name": "Uala",
+        "local_domain": "uala.com.ar"
+      },
+      "mercadopago_ar": {
+        "category": "payments",
+        "full_name": "Mercado Pago Argentina",
+        "local_domain": "mercadopago.com.ar"
+      },
+      "rapipago": {
+        "category": "payments",
+        "full_name": "Rapipago",
+        "local_domain": "rapipago.com.ar"
+      },
+      "pagofacil": {
+        "category": "payments",
+        "full_name": "PagoFacil",
+        "local_domain": "pagofacil.com.ar"
+      },
+      "bna": {
+        "category": "bank",
+        "full_name": "Banco Nacion",
+        "local_domain": "bna.com.ar"
+      }
+    },
+    "BRASIL": {
+      "itau_br": {
+        "category": "bank",
+        "full_name": "Itau Unibanco",
+        "local_domain": "itau.com.br"
+      },
+      "bradesco": {
+        "category": "bank",
+        "full_name": "Bradesco",
+        "local_domain": "bradesco.com.br"
+      },
+      "banco_do_brasil": {
+        "category": "bank",
+        "full_name": "Banco do Brasil",
+        "local_domain": "banco do brasil.com.br"
+      },
+      "caixa": {
+        "category": "bank",
+        "full_name": "Caixa Economica",
+        "local_domain": "caixa.gov.br"
+      },
+      "santander_br": {
+        "category": "bank",
+        "full_name": "Santander Brasil",
+        "local_domain": "santander.com.br"
+      },
+      "nubank": {
+        "category": "fintech",
+        "full_name": "Nubank",
+        "local_domain": "nubank.com.br"
+      },
+      "picpay": {
+        "category": "payments",
+        "full_name": "PicPay",
+        "local_domain": "picpay.com"
+      },
+      "mercadopago_br": {
+        "category": "payments",
+        "full_name": "Mercado Pago Brasil",
+        "local_domain": "mercadopago.com.br"
+      },
+      "inter": {
+        "category": "fintech",
+        "full_name": "Inter",
+        "local_domain": "inter.co"
+      },
+      "c6_bank": {
+        "category": "fintech",
+        "full_name": "C6 Bank",
+        "local_domain": "c6bank.com.br"
+      },
+      "original": {
+        "category": "fintech",
+        "full_name": "Banco Original",
+        "local_domain": "bancooriginal.com.br"
+      },
+      "btg_pactual": {
+        "category": "broker",
+        "full_name": "BTG Pactual",
+        "local_domain": "btgpactual.com"
+      },
+      "xp": {
+        "category": "broker",
+        "full_name": "XP Investimentos",
+        "local_domain": "xpi.com.br"
+      }
+    },
+    "ECUADOR": {
+      "pichincha": {
+        "category": "bank",
+        "full_name": "Banco Pichincha",
+        "local_domain": "bancopichincha.com"
+      },
+      "bolivariano": {
+        "category": "bank",
+        "full_name": "Banco Bolivariano",
+        "local_domain": "bolivariano.com.ec"
+      },
+      "promerica_ec": {
+        "category": "bank",
+        "full_name": "Promerica Ecuador",
+        "local_domain": "promerica.com.ec"
+      },
+      "guayaquil": {
+        "category": "bank",
+        "full_name": "Banco de Guayaquil",
+        "local_domain": "bancoguayaquil.com"
+      },
+      "pacifico_ec": {
+        "category": "bank",
+        "full_name": "Banco Pacifico",
+        "local_domain": "bancopacifico.com.ec"
+      }
+    },
+    "BOLIVIA": {
+      "banco_union": {
+        "category": "bank",
+        "full_name": "Banco Union",
+        "local_domain": "banco union.com.bo"
+      },
+      "bisa": {
+        "category": "bank",
+        "full_name": "Banco Bisa",
+        "local_domain": "bisa.com.bo"
+      },
+      "fie": {
+        "category": "bank",
+        "full_name": "Banco FIE",
+        "local_domain": "bancofie.com.bo"
+      },
+      "nacional": {
+        "category": "bank",
+        "full_name": "Banco Nacional",
+        "local_domain": "bnn.com.bo"
+      }
+    },
+    "PANAMA": {
+      "banistmo": {
+        "category": "bank",
+        "full_name": "Banistmo",
+        "local_domain": "banistmo.com"
+      },
+      "general": {
+        "category": "bank",
+        "full_name": "Banco General",
+        "local_domain": "banco general.com.pa"
+      },
+      "beta": {
+        "category": "bank",
+        "full_name": "Banco Beta",
+        "local_domain": "banco beta.com.pa"
+      },
+      "nacional": {
+        "category": "bank",
+        "full_name": "Banco Nacional de Panama",
+        "local_domain": "bnp.gob.pa"
+      },
+      "promerica_pa": {
+        "category": "bank",
+        "full_name": "Promerica Panama",
+        "local_domain": "promerica.com.pa"
+      }
+    },
+    "COSTA_RICA": {
+      "bnacr": {
+        "category": "bank",
+        "full_name": "Banco Nacional",
+        "local_domain": "bncr.fi.cr"
+      },
+      "baccr": {
+        "category": "bank",
+        "full_name": "BAC",
+        "local_domain": "baccredomatic.com"
+      },
+      "promerica_cr": {
+        "category": "bank",
+        "full_name": "Promerica Costa Rica",
+        "local_domain": "promerica.fi.cr"
+      },
+      "davivienda_cr": {
+        "category": "bank",
+        "full_name": "Davivienda Costa Rica",
+        "local_domain": "davivienda.fi.cr"
+      }
+    },
+    "GUATEMALA": {
+      "banco_industrial": {
+        "category": "bank",
+        "full_name": "Banco Industrial",
+        "local_domain": "bancindustrial.com.gt"
+      },
+      "banco_gyt": {
+        "category": "bank",
+        "full_name": "Banco GyT",
+        "local_domain": "banco gyt.com.gt"
+      },
+      "banrural": {
+        "category": "bank",
+        "full_name": "Banrural",
+        "local_domain": "banrural.com.gt"
+      },
+      "banco_ficohsa": {
+        "category": "bank",
+        "full_name": "Ficohsa",
+        "local_domain": "ficohsa.com.gt"
+      },
+      "promerica_gt": {
+        "category": "bank",
+        "full_name": "Promerica Guatemala",
+        "local_domain": "promerica.com.gt"
+      }
+    },
+    "HONDURAS": {
+      "bacs_hn": {
+        "category": "bank",
+        "full_name": "BAC Honduras",
+        "local_domain": "baccredomatic.com.hn"
+      },
+      "banco_atlantida": {
+        "category": "bank",
+        "full_name": "Banco Atlantida",
+        "local_domain": "banco atlantida.hn"
+      },
+      "banco_ficohsa_hn": {
+        "category": "bank",
+        "full_name": "Ficohsa Honduras",
+        "local_domain": "ficohsa.hn"
+      },
+      "promerica_hn": {
+        "category": "bank",
+        "full_name": "Promerica Honduras",
+        "local_domain": "promerica.hn"
+      }
+    },
+    "EL_SALVADOR": {
+      "agricola": {
+        "category": "bank",
+        "full_name": "Banco Agricola",
+        "local_domain": "bancoagricola.com.sv"
+      },
+      "cuscatlan": {
+        "category": "bank",
+        "full_name": "Banco Cuscatlan",
+        "local_domain": "banco cuscatlan.com.sv"
+      },
+      "davivienda_sv": {
+        "category": "bank",
+        "full_name": "Davivienda El Salvador",
+        "local_domain": "davivienda.com.sv"
+      },
+      "promerica_sv": {
+        "category": "bank",
+        "full_name": "Promerica El Salvador",
+        "local_domain": "promerica.com.sv"
+      }
+    },
+    "REPUBLICA_DOMINICANA": {
+      "banreservas": {
+        "category": "bank",
+        "full_name": "Banreservas",
+        "local_domain": "banreservas.com"
+      },
+      "bhd": {
+        "category": "bank",
+        "full_name": "BHD",
+        "local_domain": "bhd.com.do"
+      },
+      "popular_dr": {
+        "category": "bank",
+        "full_name": "Banco Popular",
+        "local_domain": "banco popular.com.do"
+      },
+      "scotiabank_dr": {
+        "category": "bank",
+        "full_name": "Scotiabank RD",
+        "local_domain": "scotiabank.com.do"
+      }
+    },
+    "GLOBAL": {
+      "paypal": {
+        "category": "payments",
+        "full_name": "PayPal",
+        "local_domain": "paypal.com"
+      },
+      "western_union": {
+        "category": "payments",
+        "full_name": "Western Union",
+        "local_domain": "westernunion.com"
+      },
+      "wise": {
+        "category": "payments",
+        "full_name": "Wise",
+        "local_domain": "wise.com"
+      },
+      "revolut": {
+        "category": "fintech",
+        "full_name": "Revolut",
+        "local_domain": "revolut.com"
+      },
+      "santander_global": {
+        "category": "bank",
+        "full_name": "Santander Global",
+        "local_domain": "santander.com"
+      },
+      "hsbc_global": {
+        "category": "bank",
+        "full_name": "HSBC Global",
+        "local_domain": "hsbc.com"
+      },
+      "citibank": {
+        "category": "bank",
+        "full_name": "Citibank",
+        "local_domain": "citibank.com"
+      }
+    }
+  },
+  "countries": {
+    "PE": "Peru",
+    "MX": "Mexico",
+    "CO": "Colombia",
+    "CL": "Chile",
+    "AR": "Argentina",
+    "BR": "Brasil",
+    "EC": "Ecuador",
+    "BO": "Bolivia",
+    "VE": "Venezuela",
+    "PY": "Paraguay",
+    "UY": "Uruguay",
+    "CR": "Costa Rica",
+    "PA": "Panama",
+    "GT": "Guatemala",
+    "HN": "Honduras",
+    "SV": "El Salvador",
+    "NI": "Nicaragua",
+    "DO": "Republica Dominicana",
+    "CUB": "Cuba",
+    "ES": "Espana",
+    "US": "Estados Unidos",
+    "CN": "China",
+    "RU": "Rusia",
+    "JP": "Japon",
+    "DE": "Alemania",
+    "FR": "Francia",
+    "GB": "Reino Unido",
+    "IT": "Italia",
+    "PT": "Portugal",
+    "CA": "Canada",
+    "AU": "Australia"
+  }
+}

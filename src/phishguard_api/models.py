@@ -35,10 +35,11 @@ class Analysis(Base):
     __tablename__ = "analyses"
     
     id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), primary_key=True)
-    decision = Column(String, nullable=False) # legitimate, phishing, uncertain
+    decision = Column(String, nullable=False) # legitimate, phishing, warning, uncertain
     probability = Column(Float, nullable=True)
     confidence = Column(Float, nullable=True)
     uncertainty = Column(Float, nullable=True)
+    brand_name = Column(String, nullable=True)
     modalities_consulted = Column(JSON, nullable=False, default=list)
     evidence_summary = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)

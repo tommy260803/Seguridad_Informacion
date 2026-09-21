@@ -3,10 +3,11 @@ const state = document.querySelector("#state");
 const result = document.querySelector("#result");
 const urlLabel = document.querySelector("#url");
 const forgetSiteButton = document.querySelector("#forget-site");
+const countrySelect = document.querySelector("#country");
 
 function render(payload) {
   const decision = payload.decision || "uncertain";
-  const probability = Number(payload.probability_phishing ?? payload.risk_score ?? 0);
+  const probability = Number(payload.probability ?? payload.risk_score ?? 0);
   const cls = decision === "phishing" ? "risk-high" : decision === "legitimate" ? "risk-low" : "risk-uncertain";
   result.innerHTML = `<p class="${cls}">${decision} · ${(probability * 100).toFixed(1)}%</p>`;
   if (Array.isArray(payload.evidence_summary)) {
@@ -16,7 +17,17 @@ function render(payload) {
   }
 }
 
-chrome.storage.local.get({ endpoint: "http://localhost:8080/analyses" }).then(({ endpoint }) => { endpointInput.value = endpoint; });
+chrome.storage.local.get({ endpoint: "http://localhost:8080/analyses", user_country: "" }).then(({ endpoint, user_country }) => {
+  endpointInput.value = endpoint;
+  countrySelect.value = user_country;
+});
+
+document.querySelector("#save-country").onclick = () => {
+  const val = countrySelect.value;
+  chrome.storage.local.set({ user_country: val }).then(() => {
+    state.textContent = val ? `País: ${countrySelect.options[countrySelect.selectedIndex].text}` : "País: auto-detectar";
+  });
+};
 chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
   const url = tab?.url || ""; urlLabel.textContent = url || "URL no disponible";
   document.querySelector("#analyze").onclick = () => {
@@ -36,7 +47,10 @@ chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
   forgetSiteButton.onclick = () => {
     if (!activeOrigin || !tab?.id) return;
     chrome.storage.local.get({ allowed_urls: [], safe_url_redirecting: {} }).then(storage => {
-      const allowed_urls = (storage.allowed_urls || []).filter(item => item !== activeOrigin);
+      const allowed_urls = (storage.allowed_urls || []).filter(item => {
+        if (typeof item === 'string') return item !== activeOrigin;
+        return item.origin !== activeOrigin;
+      });
       const safe_url_redirecting = Object.fromEntries(
         Object.entries(storage.safe_url_redirecting || {}).filter(([savedUrl]) => {
           try {
@@ -52,6 +66,13 @@ chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
       chrome.tabs.reload(tab.id);
     }).catch(() => {
       state.textContent = "No se pudo borrar el permiso";
+    });
+  };
+
+  // Clear all allowed URLs
+  document.querySelector("#clear-all").onclick = () => {
+    chrome.storage.local.set({ allowed_urls: [] }).then(() => {
+      state.textContent = "Todos los permisos borrados";
     });
   };
 });
