@@ -22,6 +22,8 @@ class CanonicalUrl:
     host: str
     registered_domain: str
     has_userinfo: bool
+    display_host: str = ""
+    is_idn_homoglyph: bool = False
 
 
 def _normalize_percent_encoding(value: str) -> str:
@@ -65,11 +67,14 @@ def canonicalize_url(
 
     has_userinfo = "@" in parsed.netloc
     userinfo = parsed.netloc.rsplit("@", 1)[0] if has_userinfo else ""
-    display_host = f"[{host}]" if ":" in host else host
+    formatted_host = f"[{host}]" if ":" in host else host
     default_port = (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
-    authority = display_host if port is None or default_port else f"{display_host}:{port}"
+    authority = formatted_host if port is None or default_port else f"{formatted_host}:{port}"
     if has_userinfo:
         authority = f"{userinfo}@{authority}"
+
+    visual_host = host_unicode.rstrip(".").lower()
+    is_idn = host.startswith("xn--") or ".xn--" in host
 
     path = _normalize_percent_encoding(parsed.path or "/")
     query = _normalize_percent_encoding(parsed.query)
@@ -80,4 +85,6 @@ def canonicalize_url(
         host=host,
         registered_domain=psl.registrable_domain(host),
         has_userinfo=has_userinfo,
+        display_host=visual_host,
+        is_idn_homoglyph=is_idn,
     )

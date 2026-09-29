@@ -11,14 +11,20 @@ class Resolver(Protocol):
     def resolve(self, host: str, port: int) -> Resolution: ...
 
 
+import atexit
 import concurrent.futures
 
-class SocketResolver:
-    """Resolve A/AAAA records through the system resolver with a strict bounded timeout."""
+_SHARED_RESOLVER_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=8, thread_name_prefix="dns-resolver"
+)
+atexit.register(lambda: _SHARED_RESOLVER_EXECUTOR.shutdown(wait=False))
 
-    def __init__(self, timeout: float = 2.5) -> None:
+class SocketResolver:
+    """Resolve A/AAAA records through the system resolver with a strict bounded timeout and shared thread pool."""
+
+    def __init__(self, timeout: float = 2.5, executor: concurrent.futures.ThreadPoolExecutor | None = None) -> None:
         self.timeout = timeout
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+        self._executor = executor or _SHARED_RESOLVER_EXECUTOR
 
     def resolve(self, host: str, port: int) -> Resolution:
         started = time.perf_counter()

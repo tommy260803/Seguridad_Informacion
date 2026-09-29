@@ -102,6 +102,15 @@ async def get_preview(job_id: str, db: AsyncSession = Depends(get_db)):
         res = await db.execute(select(Job).where(Job.id == job_id))
         job = res.scalar_one_or_none()
         if job and job.url:
+            from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
+            try:
+                validate_url_ssrf_safety(job.url)
+            except UnsafeTargetError as ssrf_err:
+                raise HTTPException(
+                    status_code=403,
+                    detail={"error": "ssrf_blocked", "message": f"Acceso bloqueado por política de seguridad: {ssrf_err.detail}"}
+                )
+
             import requests
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -130,10 +139,12 @@ async def get_preview(job_id: str, db: AsyncSession = Depends(get_db)):
 
 class AnalyzeRequest(BaseModel):
     url: str
+    profile: Optional[str] = "enterprise_gateway"
 
 class CheckRequest(BaseModel):
     url: str
     user_country: Optional[str] = None
+    profile: Optional[str] = "real_time_browser"
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
@@ -455,6 +466,60 @@ async def get_user_card(job_id: str, db: AsyncSession = Depends(get_db)) -> dict
         "bullet_reasons": bullets[:3],
         "recommendation": rec
     }
+
+@app.get("/jobs/{job_id}/forensic-manifest")
+async def get_forensic_manifest(job_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """Genera un manifiesto forense criptográfico inmutable con hashes SHA-256."""
+    from phishguard_explain.forensic_manifest import generate_forensic_manifest
+
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+
+    res_analysis = await db.execute(select(Analysis).where(Analysis.id == job_id))
+    analysis = res_analysis.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Análisis no completado o sin datos de evidencia")
+
+    screenshot_path = Path(SCREENSHOTS_DIR) / f"{job_id}.png"
+    manifest = generate_forensic_manifest(
+        job_id=str(job.id),
+        url=job.url,
+        decision=analysis.decision,
+        probability=analysis.probability or 0.0,
+        confidence=analysis.confidence or 0.0,
+        modalities_consulted=analysis.modalities_consulted or ["url"],
+        evidence_summary=analysis.evidence_summary or [],
+        screenshot_path=screenshot_path if screenshot_path.exists() else None
+    )
+    return manifest
+
+@app.get("/jobs/{job_id}/stix")
+async def get_stix_bundle(job_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """Exporta el análisis en formato estándar OASIS STIX 2.1 para integración con SIEM/SOAR."""
+    from phishguard_api.stix_exporter import export_to_stix21
+
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+
+    res_analysis = await db.execute(select(Analysis).where(Analysis.id == job_id))
+    analysis = res_analysis.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Análisis no completado")
+
+    bundle = export_to_stix21(
+        job_id=str(job.id),
+        url=job.url,
+        decision=analysis.decision,
+        probability=analysis.probability or 0.0,
+        confidence=analysis.confidence or 0.0,
+        brand_name=analysis.brand_name,
+        modalities_consulted=analysis.modalities_consulted
+    )
+    return bundle
 
 def main() -> None:
     import argparse

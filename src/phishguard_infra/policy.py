@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import socket
 from urllib.parse import SplitResult, quote, urlsplit, urlunsplit
 
 from phishguard_infra.config import InfrastructureConfig
@@ -52,6 +53,36 @@ def _is_forbidden_address(value: str) -> tuple[bool, str | None]:
     ):
         return True, "non_global_address"
     return False, None
+
+
+def validate_url_ssrf_safety(url: str) -> None:
+    """
+    Validates that a URL does not point to localhost, private RFC1918 subnets,
+    link-local addresses (169.254.x.x cloud metadata), or internal network hosts.
+    Raises UnsafeTargetError if destination is forbidden.
+    """
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname
+    except Exception as exc:
+        raise UnsafeTargetError("invalid_url", f"No se pudo parsear la URL: {exc}")
+
+    if not host:
+        raise UnsafeTargetError("missing_host", "La URL carece de hostname.")
+
+    host_lower = host.lower()
+    if host_lower in _BLOCKED_HOSTS or any(host_lower.endswith("." + sfx) for sfx in _BLOCKED_SUFFIXES):
+        raise UnsafeTargetError("blocked_host", f"Host prohibido por política de seguridad: {host}")
+
+    try:
+        records = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+        for record in records:
+            ip_str = record[4][0]
+            forbidden, reason = _is_forbidden_address(ip_str)
+            if forbidden:
+                raise UnsafeTargetError("ssrf_forbidden_ip", f"Dirección IP no pública o reservada ({ip_str}, {reason}).")
+    except socket.gaierror:
+        pass
 
 
 class TargetPolicy:

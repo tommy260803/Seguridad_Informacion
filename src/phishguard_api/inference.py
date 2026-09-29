@@ -17,7 +17,10 @@ _AUTHORITY_ONLY = list(FEATURE_PROFILES["authority_only"])
 class UnifiedModelManager:
     def __init__(self):
         self.psl = self._load_psl()
-        self.m0_model = self._load_model(Path("artifacts/url-baseline-0.2.0/conventional/model.joblib"))
+        self.m0_model = self._load_model([
+            Path("artifacts/url-baseline-0.2.0/model.joblib"),
+            Path("artifacts/url-baseline-0.2.0/conventional/model.joblib")
+        ])
         self.m1_model = self._load_model(Path("artifacts/m1-baseline/model.joblib"))
         self.m2_model = self._load_model(Path("artifacts/m2-baseline/model.joblib"))
         self.m3_model = self._load_model(Path("artifacts/m3-baseline/model.joblib"))
@@ -31,11 +34,13 @@ class UnifiedModelManager:
         print(f"Cargando PSL desde: {latest_psl}")
         return PublicSuffixList.from_file(latest_psl)
         
-    def _load_model(self, path: Path) -> Any:
-        if path.exists():
-            print(f"Modelo cargado exitosamente: {path}")
-            return joblib.load(path)
-        print(f"ADVERTENCIA: Modelo no encontrado en {path}. Usando heurística fallback (M5).")
+    def _load_model(self, paths: Path | list[Path]) -> Any:
+        candidate_paths = [paths] if isinstance(paths, Path) else paths
+        for path in candidate_paths:
+            if path.exists():
+                print(f"Modelo cargado exitosamente: {path}")
+                return joblib.load(path)
+        print(f"ADVERTENCIA: Modelo no encontrado en {candidate_paths}. Usando heurística fallback (M5).")
         return None
 
 # Instancia global
