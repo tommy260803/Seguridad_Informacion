@@ -14,20 +14,33 @@ class VisualAnalyzerError(ValueError):
 
 def analyze_screenshot(path: str | Path, *, max_bytes: int = 8_000_000, max_pixels: int = 12_000_000) -> VisualResult:
     file_path = Path(path)
+    fallback_features = {
+        "visual_observation_available": 0.0,
+        "visual_width": 0.0,
+        "visual_height": 0.0,
+        "visual_aspect_ratio": 1.0,
+        "visual_mean_luminance": 0.5,
+        "visual_luminance_std": 0.0,
+        "visual_edge_density": 0.0,
+        "visual_dark_pixel_ratio": 0.0,
+        "visual_saturated_pixel_ratio": 0.0,
+    }
+    fallback_evidence = tuple(VisualEvidence(name, value) for name, value in fallback_features.items())
+    
     try:
         size = file_path.stat().st_size
     except OSError as exc:
-        return VisualResult("error", 0, {}, (), "read_error", str(exc))
+        return VisualResult("unreachable", 0, fallback_features, fallback_evidence, "read_error", str(exc))
     if size > max_bytes:
-        return VisualResult("blocked", size, {}, (), "size_limit", "Screenshot exceeds byte limit")
+        return VisualResult("blocked", size, fallback_features, fallback_evidence, "size_limit", "Screenshot exceeds byte limit")
     try:
         with Image.open(file_path) as image:
             width, height = image.size
             if width <= 0 or height <= 0 or width * height > max_pixels:
-                return VisualResult("blocked", size, {}, (), "pixel_limit", "Screenshot exceeds pixel limit")
+                return VisualResult("blocked", size, fallback_features, fallback_evidence, "pixel_limit", "Screenshot exceeds pixel limit")
             rgb = np.asarray(image.convert("RGB"), dtype=np.float32) / 255.0
     except (OSError, UnidentifiedImageError) as exc:
-        return VisualResult("error", size, {}, (), "invalid_image", str(exc))
+        return VisualResult("error", size, fallback_features, fallback_evidence, "invalid_image", str(exc))
     luminance = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
     edge_x = np.abs(np.diff(luminance, axis=1)).mean() if width > 1 else 0.0
     edge_y = np.abs(np.diff(luminance, axis=0)).mean() if height > 1 else 0.0

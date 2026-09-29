@@ -371,6 +371,91 @@ async def get_threat_landscape(db: AsyncSession = Depends(get_db)) -> dict[str, 
         "total_analyzed": len(rows)
     }
 
+@app.get("/metrics")
+async def get_metrics():
+    """Endpoint de observabilidad en formato Prometheus / OpenMetrics."""
+    from phishguard_api.metrics import metrics
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        content=metrics.export_prometheus_text(),
+        media_type="text/plain; version=0.0.4"
+    )
+
+@app.get("/jobs/{job_id}/user-card")
+async def get_user_card(job_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """Genera una tarjeta de diagnóstico amigable en tiempo real para la extensión del navegador."""
+    try:
+        result = await db.execute(
+            select(Job).where(Job.id == job_id)
+        )
+        job = result.scalar_one_or_none()
+        if not job:
+            raise HTTPException(status_code=404, detail="Job no encontrado")
+
+        res_analysis = await db.execute(
+            select(Analysis).where(Analysis.id == job_id)
+        )
+        analysis = res_analysis.scalar_one_or_none()
+    except HTTPException:
+        raise
+    except Exception as db_err:
+        raise HTTPException(status_code=503, detail=f"Base de datos temporalmente no disponible: {str(db_err)[:100]}")
+
+    if not analysis:
+        return {
+            "status": job.status.value,
+            "ready": False,
+            "message": "Análisis en progreso..."
+        }
+
+    prob = analysis.probability or 0.0
+    if prob >= 0.70 or analysis.decision == "phishing":
+        badge = "DANGEROUS"
+        color = "#ef4444"
+        rec = "No ingreses contraseñas ni datos personales. Cierra esta pestaña inmediatamente."
+    elif prob >= 0.35 or analysis.decision == "uncertain":
+        badge = "SUSPICIOUS"
+        color = "#eab308"
+        rec = "Procede con precaución. Verifica que el dominio coincida exactamente con la entidad oficial."
+    else:
+        badge = "SAFE"
+        color = "#22c55e"
+        rec = "El sitio web no presenta indicios de suplantación ni patrones maliciosos conocidos."
+
+    # Viñetas diagnósticas para el usuario final
+    bullets = []
+    if analysis.brand_name:
+        bullets.append(f"Posible intento de suplantación de la marca {analysis.brand_name}.")
+    
+    if "url" in analysis.modalities_consulted:
+        if prob >= 0.70:
+            bullets.append("Estructura de URL con patrones típicos de ataque (subdominios engañosos o palabras clave de verificación).")
+        else:
+            bullets.append("Nombre de dominio y estructura léxica conformes a estándares habituales.")
+            
+    if "infrastructure" in analysis.modalities_consulted:
+        bullets.append("Registros DNS e infraestructura de red inspeccionados por el motor de seguridad.")
+        
+    if "content" in analysis.modalities_consulted:
+        bullets.append("Código fuente HTML y formularios de inicio de sesión validados semánticamente.")
+
+    if not bullets:
+        bullets.append("Análisis probabilístico completado satisfactoriamente.")
+
+    return {
+        "ready": True,
+        "job_id": str(job.id),
+        "url": job.url,
+        "decision": analysis.decision,
+        "risk_badge": badge,
+        "badge_color": color,
+        "risk_percentage": int(round(prob * 100)),
+        "confidence_percentage": int(round((analysis.confidence or 0.85) * 100)),
+        "brand_name": analysis.brand_name,
+        "bullet_reasons": bullets[:3],
+        "recommendation": rec
+    }
+
 def main() -> None:
     import argparse
     import uvicorn

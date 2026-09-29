@@ -186,8 +186,8 @@ for idx, name in enumerate(["M0", "M1", "M2"]):
     y_true = data[name]["labels"]
     y_score = data[name]["probs"]
     ax = axes[idx]
-    ax.hist(y_score[y_true == 0], bins=50, alpha=0.6, color=COLORS["M0"], label='Legitimate', density=True)
-    ax.hist(y_score[y_true == 1], bins=50, alpha=0.6, color=COLORS["M3"], label='Phishing', density=True)
+    ax.hist(y_score[y_true == 0], bins=15, range=(0.0, 1.0), alpha=0.6, color=COLORS["M0"], label='Legitimate')
+    ax.hist(y_score[y_true == 1], bins=15, range=(0.0, 1.0), alpha=0.6, color=COLORS["M3"], label='Phishing')
     ax.axvline(x=0.5, color='black', ls='--', lw=1, alpha=0.7, label='Threshold')
     ax.set_xlabel('Predicted Probability')
     ax.set_ylabel('Density')
@@ -206,7 +206,7 @@ print("OK: score_distributions.png/pdf")
 # FIGURE 6: Feature Importance (M0)
 # ============================================================
 import joblib
-m0 = joblib.load(ARTIFACTS / "url-baseline-0.2.0/conventional/model.joblib")
+m0 = joblib.load(ARTIFACTS / "url-baseline-0.2.0/model.joblib")
 model = m0["model"]
 feature_names = m0["feature_names"]
 

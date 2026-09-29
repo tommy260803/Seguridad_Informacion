@@ -151,38 +151,46 @@ async def analyze_with_llm(
         if not groq_key:
             return None, {"provider": "groq", "kind": "not_configured", "message": "GROQ_API_KEY not set"}
         
-        try:
-            response = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                json={
-                    "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.1,
-                    "max_tokens": 600
-                },
-                headers={
-                    "Authorization": f"Bearer {groq_key}",
-                    "Content-Type": "application/json"
-                },
-                timeout=timeout
-            )
-            
-            if response.status_code != 200:
-                kind = "quota" if response.status_code == 429 else "provider_error"
-                return None, {"provider": "groq", "kind": kind, "message": response.text[:512]}
-            
-            response_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
-            parsed = _parse_json_response(response_text)
-            
-            if parsed and "probability" in parsed:
-                # Ensure probability is valid
-                parsed["probability"] = max(0.0, min(1.0, float(parsed["probability"])))
-                return parsed, None
-            else:
-                return None, {"provider": "groq", "kind": "invalid_response", "message": "No valid JSON with probability"}
+        last_error = None
+        for attempt in range(attempts):
+            try:
+                response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    json={
+                        "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.1,
+                        "max_tokens": 600
+                    },
+                    headers={
+                        "Authorization": f"Bearer {groq_key}",
+                        "Content-Type": "application/json"
+                    },
+                    timeout=timeout
+                )
                 
-        except Exception as exc:
-            return None, {"provider": "groq", "kind": "timeout_or_invalid_response", "message": str(exc)[:512]}
+                if response.status_code == 200:
+                    response_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                    parsed = _parse_json_response(response_text)
+                    
+                    if parsed and "probability" in parsed:
+                        parsed["probability"] = max(0.0, min(1.0, float(parsed["probability"])))
+                        return parsed, None
+                    else:
+                        last_error = {"provider": "groq", "kind": "invalid_response", "message": "No valid JSON with probability"}
+                else:
+                    kind = "quota" if response.status_code == 429 else "provider_error"
+                    last_error = {"provider": "groq", "kind": kind, "message": response.text[:512]}
+                    if response.status_code == 429 and attempt < attempts - 1:
+                        import time
+                        time.sleep(2 ** attempt)  # Exponential backoff 1s, 2s
+            except Exception as exc:
+                last_error = {"provider": "groq", "kind": "timeout_or_invalid_response", "message": str(exc)[:512]}
+                if attempt < attempts - 1:
+                    import time
+                    time.sleep(1.0)
+                
+        return None, last_error or {"provider": "groq", "kind": "failed", "message": "Groq retries exhausted"}
     
     def execute_gemini() -> tuple[Optional[Dict], Optional[Dict]]:
         if not gemini_key:
