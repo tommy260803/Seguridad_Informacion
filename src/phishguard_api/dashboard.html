@@ -1,231 +1,896 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhishGuard - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
-    <style>
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .stat-card { transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
-    <header class="bg-gray-800 shadow-md p-4 flex justify-between items-center sticky top-0 z-10">
-        <div class="flex items-center space-x-3">
-            <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            <h1 class="text-xl font-bold">PhishGuard <span class="text-sm font-normal text-gray-400">Dashboard</span></h1>
-        </div>
-        <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-400" id="last-update"></span>
-            <button onclick="refreshAll()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm">Actualizar</button>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto p-6">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-gray-700">
-                <div class="text-gray-400 text-sm">Total Analizados</div>
-                <div class="text-3xl font-bold text-white" id="stat-total">-</div>
-            </div>
-            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-red-900/50">
-                <div class="text-red-400 text-sm">Phishing</div>
-                <div class="text-3xl font-bold text-red-400" id="stat-phishing">-</div>
-            </div>
-            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-yellow-900/50">
-                <div class="text-yellow-400 text-sm">Warnings</div>
-                <div class="text-3xl font-bold text-yellow-400" id="stat-warning">-</div>
-            </div>
-            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-green-900/50">
-                <div class="text-green-400 text-sm">Legitimos</div>
-                <div class="text-3xl font-bold text-green-400" id="stat-legitimate">-</div>
-            </div>
-            <div class="stat-card bg-gray-800 p-4 rounded-xl border border-blue-900/50">
-                <div class="text-blue-400 text-sm">Tasa Phishing</div>
-                <div class="text-3xl font-bold text-blue-400" id="stat-rate">-</div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Quick Analysis -->
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <h2 class="text-lg font-semibold mb-4">Analisis Rapido</h2>
-                <form id="check-form" class="space-y-3">
-                    <input type="url" id="url-input" required placeholder="https://ejemplo.com" 
-                        class="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
-                        Verificar URL
-                    </button>
-                </form>
-                <div id="check-result" class="mt-4 hidden">
-                    <div class="p-4 rounded-lg" id="result-box">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-lg" id="result-decision"></span>
-                            <span class="text-2xl font-bold" id="result-prob"></span>
-                        </div>
-                        <div class="mt-2 text-sm text-gray-400" id="result-model"></div>
-                        <div class="mt-2 text-sm" id="result-brand"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Threat Landscape -->
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <h2 class="text-lg font-semibold mb-4">Marcas Mas Atacadas</h2>
-                <canvas id="brands-chart" height="200"></canvas>
-            </div>
-        </div>
-
-        <!-- Recent Analyses -->
-        <div class="mt-6 bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-lg font-semibold mb-4">Analisis Recientes</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-gray-400 border-b border-gray-700">
-                            <th class="text-left p-2">URL</th>
-                            <th class="text-left p-2">Decision</th>
-                            <th class="text-left p-2">Probabilidad</th>
-                            <th class="text-left p-2">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table"></tbody>
-                </table>
-            </div>
-        </div>
-    </main>
-
-    <script>
-        const API = window.location.origin;
-        let brandsChart = null;
-
-        async function fetchStats() {
-            try {
-                const res = await fetch(`${API}/api/stats`);
-                const data = await res.json();
-                document.getElementById('stat-total').textContent = data.total_analyses || 0;
-                document.getElementById('stat-phishing').textContent = data.phishing_count || 0;
-                document.getElementById('stat-warning').textContent = data.warning_count || 0;
-                document.getElementById('stat-legitimate').textContent = data.legitimate_count || 0;
-                document.getElementById('stat-rate').textContent = `${data.phishing_rate || 0}%`;
-            } catch (e) { console.error('Stats error:', e); }
-        }
-
-        async function fetchHistory() {
-            try {
-                const res = await fetch(`${API}/api/history?limit=20`);
-                const data = await res.json();
-                const tbody = document.getElementById('history-table');
-                tbody.innerHTML = (data.analyses || []).map(a => `
-                    <tr class="border-b border-gray-700 hover:bg-gray-700/50">
-                        <td class="p-2 max-w-xs truncate" title="${a.url || a.id}">${a.url || a.id.substring(0, 8) + '...'}</td>
-                        <td class="p-2">
-                            <span class="px-2 py-1 rounded text-xs font-medium ${a.decision === 'phishing' ? 'bg-red-900/50 text-red-300' : a.decision === 'warning' ? 'bg-yellow-900/50 text-yellow-300' : 'bg-green-900/50 text-green-300'}">
-                                ${a.decision}
-                            </span>
-                        </td>
-                        <td class="p-2">${(a.probability * 100).toFixed(1)}%</td>
-                        <td class="p-2 text-gray-400">${a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</td>
-                    </tr>
-                `).join('');
-            } catch (e) { console.error('History error:', e); }
-        }
-
-        async function fetchBrands() {
-            try {
-                const res = await fetch(`${API}/api/threat-landscape`);
-                const data = await res.json();
-                const brands = data.top_targeted_brands || [];
-                
-                if (brandsChart) brandsChart.destroy();
-                
-                const ctx = document.getElementById('brands-chart').getContext('2d');
-                brandsChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: brands.map(b => b.brand),
-                        datasets: [{
-                            label: 'Detecciones',
-                            data: brands.map(b => b.count),
-                            backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                            borderColor: 'rgba(239, 68, 68, 1)',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: '#374151' }, ticks: { color: '#9CA3AF' } },
-                            x: { grid: { display: false }, ticks: { color: '#9CA3AF' } }
-                        }
-                    }
-                });
-            } catch (e) { console.error('Brands error:', e); }
-        }
-
-        document.getElementById('check-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('url-input').value;
-            const resultDiv = document.getElementById('check-result');
-            resultDiv.classList.remove('hidden');
-            
-            try {
-                const res = await fetch(`${API}/check`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url })
-                });
-                const data = await res.json();
-                
-                const box = document.getElementById('result-box');
-                const colors = {
-                    phishing: 'bg-red-900/30 border border-red-700',
-                    warning: 'bg-yellow-900/30 border border-yellow-700',
-                    legitimate: 'bg-green-900/30 border border-green-700'
-                };
-                box.className = `p-4 rounded-lg ${colors[data.decision] || colors.legitimate}`;
-                
-                const textColors = {
-                    phishing: 'text-red-400',
-                    warning: 'text-yellow-400',
-                    legitimate: 'text-green-400'
-                };
-                document.getElementById('result-decision').textContent = data.decision.toUpperCase();
-                document.getElementById('result-decision').className = `${textColors[data.decision] || textColors.legitimate} font-bold`;
-                document.getElementById('result-prob').textContent = `${(data.probability * 100).toFixed(1)}%`;
-                document.getElementById('result-model').textContent = `Modelo: ${data.model}`;
-                
-                if (data.brand_analysis) {
-                    document.getElementById('result-brand').innerHTML = `<span class="text-red-400">Marca suplantada: ${data.brand_analysis.closest_brand}</span>`;
-                } else {
-                    document.getElementById('result-brand').innerHTML = '';
-                }
-            } catch (e) {
-                document.getElementById('result-box').className = 'p-4 rounded-lg bg-yellow-900/30 border border-yellow-700';
-                document.getElementById('result-decision').textContent = 'ERROR';
-                document.getElementById('result-prob').textContent = '-';
-                document.getElementById('result-model').textContent = e.message;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishGuard Pro - SOC Cyber Defense Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
             }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-base: #090d16;
+      --bg-surface: rgba(15, 23, 42, 0.75);
+      --bg-surface-hover: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    }
+
+    html:not(.dark) {
+      --bg-base: #f1f5f9;
+      --bg-surface: #ffffff;
+      --bg-surface-hover: #f8fafc;
+      --border-color: rgba(15, 23, 42, 0.08);
+      --text-main: #0f172a;
+      --text-sub: #64748b;
+      --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .glass-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.25);
+    }
+
+    .pulse-online {
+      animation: pulseGreen 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseGreen {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
+    }
+
+    .theme-icon-sun, .theme-icon-moon {
+      transition: transform 0.25s ease;
+    }
+    html.dark .theme-icon-moon { display: none; }
+    html.dark .theme-icon-sun { display: block; }
+    html:not(.dark) .theme-icon-sun { display: none; }
+    html:not(.dark) .theme-icon-moon { display: block; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+  
+  <!-- Header Bar -->
+  <header class="sticky top-0 z-30 glass-card border-b border-t-0 border-x-0 px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-sky-500/25 flex-shrink-0 text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-tight bg-gradient-to-r from-sky-400 to-cyan-200 bg-clip-text text-transparent">PHISHGUARD</h1>
+            <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">SOC Intelligence</span>
+          </div>
+          <p class="text-xs text-slate-400 dark:text-slate-400">Sistema de Detección Multimodal & Auditoría Forense</p>
+        </div>
+      </div>
+
+      <!-- Controls & Actions -->
+      <div class="flex items-center space-x-3">
+        <!-- Live Health Badge -->
+        <div id="health-badge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-online"></span>
+          <span id="health-text">API Online :8080</span>
+        </div>
+
+        <!-- Last Updated Indicator -->
+        <span class="hidden md:inline-block text-xs text-slate-400" id="last-update">Sincronizando...</span>
+
+        <!-- Refresh Button -->
+        <button onclick="refreshAll(true)" id="btn-refresh" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white shadow-sm shadow-sky-600/30 transition-all active:scale-95" title="Actualizar datos">
+          <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Actualizar</span>
+        </button>
+
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle" class="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-700/60 dark:border-slate-700/60 bg-slate-800/60 dark:bg-slate-800/60 hover:border-sky-500/40 text-slate-300 dark:text-slate-300 hover:text-sky-400 transition-colors shadow-sm" title="Alternar Modo Claro / Oscuro" aria-label="Cambiar tema">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg class="w-4 h-4 theme-icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path stroke-linecap="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg class="w-4 h-4 theme-icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
+
+    <!-- KPI Metric Stat Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      
+      <!-- Total Analyzed -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-slate-700/50">
+        <div class="flex items-center justify-between text-slate-400 mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider">Total Auditadas</span>
+          <div class="w-8 h-8 rounded-lg bg-slate-800/80 flex items-center justify-center text-slate-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight" id="stat-total">-</div>
+          <div class="text-[11px] text-slate-400 mt-1">Inspecciones globales</div>
+        </div>
+      </div>
+
+      <!-- Phishing Neutralized -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-red-500/30 bg-gradient-to-br from-red-500/5 to-transparent">
+        <div class="flex items-center justify-between text-red-400 mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider">Phishing Bloqueado</span>
+          <div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight text-red-500" id="stat-phishing">-</div>
+          <div class="text-[11px] text-red-400/80 mt-1 flex items-center gap-1">
+            <span id="stat-rate" class="font-bold">--%</span> del tráfico auditado
+          </div>
+        </div>
+      </div>
+
+      <!-- Regional Warnings -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
+        <div class="flex items-center justify-between text-amber-400 mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider">Advertencias / Región</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight text-amber-500" id="stat-warning">-</div>
+          <div class="text-[11px] text-amber-400/80 mt-1">Colisiones o desvíos foráneos</div>
+        </div>
+      </div>
+
+      <!-- Legitimate Sites -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
+        <div class="flex items-center justify-between text-emerald-400 mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider">Sitios Legítimos</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight text-emerald-500" id="stat-legitimate">-</div>
+          <div class="text-[11px] text-emerald-400/80 mt-1">Tranco 1M & oficiales</div>
+        </div>
+      </div>
+
+      <!-- Average Threat Index -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between border-sky-500/30 bg-gradient-to-br from-sky-500/5 to-transparent">
+        <div class="flex items-center justify-between text-sky-400 mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider">Riesgo Promedio</span>
+          <div class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400 border border-sky-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold tracking-tight text-sky-400" id="stat-avg-prob">-</div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+            <div id="stat-risk-meter" class="bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 h-1.5 transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Operational Grid: Interactive URL Diagnostic Tool + Threat Landscape -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Interactive Quick Diagnostic Scanner (7 cols) -->
+      <div class="lg:col-span-7 glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+              Escáner Forense Rápido en Vivo
+            </h2>
+            <span class="text-xs text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20 font-mono">IA M0 + Brand + Reglas</span>
+          </div>
+          <p class="text-xs text-slate-400">Verifica cualquier URL con detección contextual de país, homoglifos y verificación Tranco Top 1M.</p>
+        </div>
+
+        <form id="check-form" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <!-- Country Selector -->
+            <div class="sm:col-span-1">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Región del Usuario</label>
+              <select id="scan-country" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-900/60 dark:bg-slate-900/80 border border-slate-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none transition-colors">
+                <option value="">Auto-detectar (IP)</option>
+                <option value="PERU" selected>🇵🇪 Perú (BCP, Interbank...)</option>
+                <option value="COLOMBIA">🇨🇴 Colombia (Bancolombia...)</option>
+                <option value="CHILE">🇨🇱 Chile (Banco de Chile...)</option>
+                <option value="MEXICO">🇲🇽 México (BBVA, Banorte...)</option>
+                <option value="ARGENTINA">🇦🇷 Argentina (Galicia...)</option>
+                <option value="BRASIL">🇧🇷 Brasil (Itaú, Bradesco...)</option>
+                <option value="ESPANA">🇪🇸 España (Santander, BBVA...)</option>
+              </select>
+            </div>
+
+            <!-- URL Input -->
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Destino a Auditar</label>
+              <div class="flex gap-2">
+                <input type="url" id="url-input" required placeholder="https://ejemplo.com o https://bcp.com" 
+                  class="flex-1 px-3.5 py-2 text-xs rounded-xl bg-slate-900/60 dark:bg-slate-900/80 border border-slate-700 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none transition-colors font-mono">
+                <button type="submit" id="btn-submit-scan" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-sky-600/30 flex-shrink-0">
+                  <svg id="scan-spinner" class="hidden w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span id="scan-btn-text">Escanear</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <!-- Result Box (Hidden by default) -->
+        <div id="check-result" class="hidden mt-3 rounded-xl p-4 border transition-all duration-300">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/50 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <span id="result-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider"></span>
+              <span id="result-domain" class="text-xs font-mono font-semibold text-slate-300"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">Probabilidad:</span>
+              <span id="result-prob" class="text-lg font-black font-mono"></span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-slate-400 block mb-0.5">Diagnóstico y Veredicto:</span>
+              <p id="result-rationale" class="font-medium text-slate-200"></p>
+              <div id="result-brand" class="mt-2 text-[11.5px]"></div>
+            </div>
+            <div class="space-y-1.5 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between text-slate-400 text-[11px]">
+                <span>Reputación Tranco:</span>
+                <span id="result-tranco" class="font-mono text-slate-200">Verificando...</span>
+              </div>
+              <div class="flex justify-between text-slate-400 text-[11px]">
+                <span>Origen Geográfico:</span>
+                <span id="result-geo" class="font-mono text-slate-200">-</span>
+              </div>
+              <div class="flex justify-between text-slate-400 text-[11px]">
+                <span>Esqueleto Homoglifo:</span>
+                <span id="result-skeleton" class="font-mono text-slate-200">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons for Diagnostic Result -->
+          <div class="mt-3.5 pt-3 border-t border-slate-700/40 flex flex-wrap gap-2 justify-end">
+            <a id="btn-result-sandbox" target="_blank" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/20 transition-colors flex items-center gap-1">
+              <span>🛡️ Sandbox Preview</span>
+            </a>
+            <a id="btn-result-manifest" target="_blank" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/20 transition-colors flex items-center gap-1">
+              <span>📜 Manifest Forense SHA-256</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Threat Landscape: Brands & Distribution (5 cols) -->
+      <div class="lg:col-span-5 glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-bold flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+            Marcas Más Atacadas
+          </h2>
+          <span class="text-xs text-slate-400">Threat Intelligence</span>
+        </div>
+        
+        <div class="relative h-56 w-full flex items-center justify-center">
+          <canvas id="brands-chart"></canvas>
+        </div>
+
+        <div class="text-[11px] text-slate-400 border-t border-slate-700/40 pt-2 flex justify-between">
+          <span>Actualización continua por heurística forense</span>
+          <span class="text-sky-400 font-medium">Dataset PhishGuard</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Forensic Audit Trail (History) -->
+    <section class="glass-card rounded-2xl p-6 space-y-4">
+      
+      <!-- Table Header & Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700/50 pb-4">
+        <div>
+          <h2 class="text-base font-bold flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            Registro Forense en Tiempo Real
+          </h2>
+          <p class="text-xs text-slate-400">Historial de URLs auditadas por el motor de detección y agentes satélite.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Filter Tabs -->
+          <div class="flex rounded-xl bg-slate-900/60 dark:bg-slate-900/80 p-1 border border-slate-700 text-xs">
+            <button onclick="setFilter('all')" class="filter-tab active px-3 py-1 rounded-lg font-medium transition-colors" data-filter="all">Todos</button>
+            <button onclick="setFilter('phishing')" class="filter-tab px-3 py-1 rounded-lg font-medium text-red-400 hover:text-red-300 transition-colors" data-filter="phishing">🚨 Phishing</button>
+            <button onclick="setFilter('warning')" class="filter-tab px-3 py-1 rounded-lg font-medium text-amber-400 hover:text-amber-300 transition-colors" data-filter="warning">⚠️ Advertencias</button>
+            <button onclick="setFilter('legitimate')" class="filter-tab px-3 py-1 rounded-lg font-medium text-emerald-400 hover:text-emerald-300 transition-colors" data-filter="legitimate">🛡️ Legítimos</button>
+          </div>
+
+          <!-- Search Filter -->
+          <div class="relative">
+            <input type="text" id="history-search" placeholder="Filtrar por dominio..." 
+              class="w-44 sm:w-56 px-3 py-1.5 pl-8 text-xs rounded-xl bg-slate-900/60 dark:bg-slate-900/80 border border-slate-700 focus:border-sky-500 focus:outline-none transition-colors">
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="overflow-x-auto rounded-xl border border-slate-700/40">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700/60 bg-slate-800/40 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+              <th class="p-3">Destino / URL Auditada</th>
+              <th class="p-3">Veredicto</th>
+              <th class="p-3">Riesgo IA</th>
+              <th class="p-3">Evidencia / Reputación</th>
+              <th class="p-3">Fecha & Hora</th>
+              <th class="p-3 text-right">Acciones Forenses</th>
+            </tr>
+          </thead>
+          <tbody id="history-table" class="divide-y divide-slate-700/30">
+            <tr>
+              <td colspan="6" class="p-6 text-center text-slate-400">
+                <div class="flex flex-col items-center justify-center gap-2">
+                  <svg class="w-6 h-6 animate-spin text-sky-500" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                  <span>Cargando auditorías forenses...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/60 py-4 px-4 text-center text-xs text-slate-500 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-400">PhishGuard Pro Platform</span>
+        <span>•</span>
+        <span>Motor Híbrido Multimodal (Tranco 1M + XAI + Geo-Detección)</span>
+      </div>
+      <div>
+        <span>Desarrollado para Ciberseguridad Activa & Protección Bancaria</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Dashboard JavaScript Logic -->
+  <script>
+    const API = window.location.origin;
+    let brandsChart = null;
+    let allAnalyses = [];
+    let currentFilter = 'all';
+
+    // ==========================================
+    // Theme Switcher (Dark / Light Mode)
+    // ==========================================
+    const themeToggleBtn = document.getElementById('theme-toggle');
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('phishguard_dashboard_theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('phishguard_dashboard_theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('phishguard_dashboard_theme', 'dark');
+      }
+      // Re-render chart to adapt to theme colors
+      fetchBrands();
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+    initTheme();
+
+    // ==========================================
+    // Health Check
+    // ==========================================
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) });
+        const badge = document.getElementById('health-badge');
+        const text = document.getElementById('health-text');
+        if (res.ok) {
+          badge.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+          text.textContent = "API Online :8080";
+        } else {
+          badge.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20";
+          text.textContent = "API Degradada";
+        }
+      } catch (e) {
+        const badge = document.getElementById('health-badge');
+        const text = document.getElementById('health-text');
+        badge.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20";
+        text.textContent = "API Desconectada";
+      }
+    }
+
+    // ==========================================
+    // Fetch KPI Stats
+    // ==========================================
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API}/api/stats`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        document.getElementById('stat-total').textContent = (data.total_analyses || 0).toLocaleString();
+        document.getElementById('stat-phishing').textContent = (data.phishing_count || 0).toLocaleString();
+        document.getElementById('stat-warning').textContent = (data.warning_count || 0).toLocaleString();
+        document.getElementById('stat-legitimate').textContent = (data.legitimate_count || 0).toLocaleString();
+        
+        const rate = (data.phishing_rate || 0).toFixed(1);
+        document.getElementById('stat-rate').textContent = `${rate}%`;
+        
+        const avg = ((data.average_probability || 0) * 100).toFixed(1);
+        document.getElementById('stat-avg-prob').textContent = `${avg}%`;
+        document.getElementById('stat-risk-meter').style.width = `${Math.min(avg, 100)}%`;
+      } catch (e) {
+        console.error('Error fetching stats:', e);
+      }
+    }
+
+    // ==========================================
+    // Fetch Threat Landscape Chart
+    // ==========================================
+    async function fetchBrands() {
+      try {
+        const res = await fetch(`${API}/api/threat-landscape`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const brands = data.top_targeted_brands || [];
+
+        if (brandsChart) brandsChart.destroy();
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#94a3b8' : '#475569';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.06)';
+
+        const ctx = document.getElementById('brands-chart').getContext('2d');
+        brandsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: brands.map(b => b.brand.toUpperCase()),
+            datasets: [{
+              label: 'Ataques Detectados',
+              data: brands.map(b => b.count),
+              backgroundColor: 'rgba(239, 68, 68, 0.45)',
+              borderColor: 'rgba(239, 68, 68, 0.9)',
+              hoverBackgroundColor: 'rgba(239, 68, 68, 0.7)',
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                titleColor: isDark ? '#f8fafc' : '#0f172a',
+                bodyColor: isDark ? '#94a3b8' : '#475569',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                borderWidth: 1
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: gridColor },
+                ticks: { color: textColor, font: { size: 10 } }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: textColor, font: { size: 10, weight: '600' } }
+              }
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Error fetching brands chart:', e);
+      }
+    }
+
+    // ==========================================
+    // Fetch History & Render Table
+    // ==========================================
+    async function fetchHistory() {
+      try {
+        const res = await fetch(`${API}/api/history?limit=100`);
+        if (!res.ok) return;
+        const data = await res.json();
+        allAnalyses = data.analyses || [];
+        renderHistory();
+      } catch (e) {
+        console.error('Error fetching history:', e);
+      }
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById('history-table');
+      const searchTerm = document.getElementById('history-search').value.toLowerCase().trim();
+
+      let filtered = allAnalyses.filter(item => {
+        if (currentFilter !== 'all' && item.decision !== currentFilter) {
+          return false;
+        }
+        if (searchTerm) {
+          const u = (item.url || '').toLowerCase();
+          const id = (item.id || '').toLowerCase();
+          return u.includes(searchTerm) || id.includes(searchTerm);
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="p-8 text-center text-slate-400">
+              <div class="flex flex-col items-center justify-center gap-1.5">
+                <span class="text-2xl">🔍</span>
+                <span class="font-medium">No se encontraron registros que coincidan con el filtro actual.</span>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const prob = (item.probability * 100).toFixed(1);
+        let decisionBadge = '';
+        let probColor = 'bg-emerald-500';
+
+        if (item.decision === 'phishing') {
+          decisionBadge = '<span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-red-500/10 text-red-400 border border-red-500/20">🚨 Phishing</span>';
+          probColor = 'bg-red-500';
+        } else if (item.decision === 'warning') {
+          decisionBadge = '<span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">⚠️ Advertencia</span>';
+          probColor = 'bg-amber-500';
+        } else {
+          decisionBadge = '<span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">🛡️ Legítimo</span>';
+          probColor = 'bg-emerald-500';
+        }
+
+        // Extract evidence summary details
+        let repLabel = 'Auditoría Heurística';
+        if (item.evidence && item.evidence.length > 0) {
+          const ev = item.evidence[0];
+          if (ev.reputation && ev.reputation.reputation_label) {
+            repLabel = ev.reputation.reputation_label;
+          } else if (ev.homoglyphs && ev.homoglyphs.closest_brand_target && ev.homoglyphs.closest_brand_target !== 'none') {
+            repLabel = `Marca: ${ev.homoglyphs.closest_brand_target.toUpperCase()}`;
+          }
+        }
+
+        let timeStr = '-';
+        if (item.created_at) {
+          const d = new Date(item.created_at);
+          timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        let host = item.url;
+        try { host = new URL(item.url).hostname; } catch(_) {}
+
+        return `
+          <tr class="hover:bg-slate-800/20 dark:hover:bg-slate-800/40 transition-colors">
+            <!-- URL / Host -->
+            <td class="p-3">
+              <div class="flex items-center gap-2 max-w-xs sm:max-w-sm truncate">
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="font-mono font-bold text-sky-400 hover:underline truncate" title="${item.url}">
+                  ${host}
+                </a>
+              </div>
+              <div class="text-[10px] text-slate-400 truncate max-w-xs">${item.url}</div>
+            </td>
+
+            <!-- Decision -->
+            <td class="p-3 whitespace-nowrap">
+              ${decisionBadge}
+            </td>
+
+            <!-- Probability Meter -->
+            <td class="p-3 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                <div class="w-16 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div class="${probColor} h-1.5 rounded-full" style="width: ${prob}%"></div>
+                </div>
+                <span class="font-mono font-bold text-[11px]">${prob}%</span>
+              </div>
+            </td>
+
+            <!-- Evidence / Reputation -->
+            <td class="p-3 text-slate-300 text-[11px]">
+              <span class="inline-block px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50 text-[10.5px]">
+                ${repLabel}
+              </span>
+            </td>
+
+            <!-- Date -->
+            <td class="p-3 whitespace-nowrap text-slate-400 text-[11px]">
+              ${timeStr}
+            </td>
+
+            <!-- Actions -->
+            <td class="p-3 text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                <a href="/previews/${item.id}" target="_blank" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/20 hover:border-sky-500/50 text-[10.5px] font-semibold transition-colors" title="Visualizar sandbox aislado">
+                  Sandbox
+                </a>
+                <a href="/jobs/${item.id}/forensic-manifest" target="_blank" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/20 hover:border-amber-500/50 text-[10.5px] font-semibold transition-colors" title="Ver manifest forense firmado">
+                  Manifest
+                </a>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(b => {
+        if (b.getAttribute('data-filter') === filter) {
+          b.className = "filter-tab active px-3 py-1 rounded-lg font-bold bg-sky-600 text-white shadow-sm transition-colors";
+        } else {
+          b.className = "filter-tab px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-colors";
+        }
+      });
+      renderHistory();
+    }
+
+    document.getElementById('history-search').addEventListener('input', renderHistory);
+
+    // ==========================================
+    // Interactive Quick Scanner Form
+    // ==========================================
+    document.getElementById('check-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const urlInput = document.getElementById('url-input');
+      const countrySelect = document.getElementById('scan-country');
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      const btn = document.getElementById('btn-submit-scan');
+      const spinner = document.getElementById('scan-spinner');
+      const btnText = document.getElementById('scan-btn-text');
+      const resultDiv = document.getElementById('check-result');
+
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnText.textContent = 'Auditando...';
+
+      try {
+        const payload = { url: url };
+        if (countrySelect.value) {
+          payload.user_country = countrySelect.value;
+        }
+
+        const res = await fetch(`${API}/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
 
-        function refreshAll() {
-            document.getElementById('last-update').textContent = `Actualizado: ${new Date().toLocaleTimeString()}`;
-            fetchStats();
-            fetchHistory();
-            fetchBrands();
+        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+        const data = await res.json();
+
+        resultDiv.classList.remove('hidden');
+        
+        // Host & Probability
+        let hostname = url;
+        try { hostname = new URL(url).hostname; } catch(_) {}
+        document.getElementById('result-domain').textContent = hostname;
+        
+        const prob = Math.round((data.probability || 0) * 100);
+        document.getElementById('result-prob').textContent = `${prob}%`;
+
+        const badge = document.getElementById('result-badge');
+        const rationale = document.getElementById('result-rationale');
+        const brandBox = document.getElementById('result-brand');
+
+        if (data.decision === 'phishing') {
+          resultDiv.className = "mt-3 rounded-xl p-4 border border-red-500/40 bg-red-500/5";
+          badge.className = "px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30";
+          badge.textContent = "🚨 Amenaza de Phishing";
+          rationale.textContent = "El modelo detectó patrones claros de suplantación o infraestructura maliciosa.";
+        } else if (data.decision === 'warning') {
+          resultDiv.className = "mt-3 rounded-xl p-4 border border-amber-500/40 bg-amber-500/5";
+          badge.className = "px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30";
+          badge.textContent = "⚠️ Advertencia / Confusión";
+          rationale.textContent = "Dominio foráneo o discrepancia de marca detectada. Procede con precaución.";
+        } else {
+          resultDiv.className = "mt-3 rounded-xl p-4 border border-emerald-500/40 bg-emerald-500/5";
+          badge.className = "px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          badge.textContent = "🛡️ Sitio Legítimo";
+          rationale.textContent = "Dominio de alta reputación o consistente con entidades verificadas.";
         }
 
-        // Initial load and auto-refresh
-        refreshAll();
-        setInterval(refreshAll, 30000);
-    </script>
+        // Details
+        const rep = data.reputation;
+        if (rep) {
+          document.getElementById('result-tranco').textContent = rep.reputation_label || 'Top 1M Global';
+        } else {
+          document.getElementById('result-tranco').textContent = 'No indexado en Tranco 1M';
+        }
+
+        const geo = data.geo_origin;
+        if (geo) {
+          document.getElementById('result-geo').textContent = `${geo.origin_country || 'Desconocido'} (${geo.tld || '-'})`;
+        } else {
+          document.getElementById('result-geo').textContent = 'Estándar Global';
+        }
+
+        const homoglyphs = data.homoglyphs;
+        if (homoglyphs) {
+          document.getElementById('result-skeleton').textContent = homoglyphs.visual_skeleton || '-';
+        } else {
+          document.getElementById('result-skeleton').textContent = 'Limpio';
+        }
+
+        // Brand suggestions
+        if (data.local_suggestions && data.local_suggestions.length > 0) {
+          const sug = data.local_suggestions[0];
+          brandBox.innerHTML = `<span class="text-amber-400 font-semibold">Sugerencia Local:</span> ${sug.brand} → <a href="https://${sug.official_domain}" target="_blank" class="text-sky-400 underline font-bold">${sug.official_domain}</a>`;
+        } else if (data.brand_analysis && data.brand_analysis.closest_brand) {
+          brandBox.innerHTML = `<span class="text-red-400 font-semibold">Marca relacionada:</span> ${data.brand_analysis.closest_brand.toUpperCase()}`;
+        } else {
+          brandBox.innerHTML = '';
+        }
+
+        // Sandbox & Manifest links
+        const btnSandbox = document.getElementById('btn-result-sandbox');
+        const btnManifest = document.getElementById('btn-result-manifest');
+        if (data.job_id) {
+          btnSandbox.href = `/previews/${data.job_id}`;
+          btnSandbox.classList.remove('hidden');
+          btnManifest.href = `/jobs/${data.job_id}/forensic-manifest`;
+          btnManifest.classList.remove('hidden');
+        } else {
+          btnSandbox.classList.add('hidden');
+          btnManifest.classList.add('hidden');
+        }
+
+        // Refresh history to show newly created check
+        fetchHistory();
+        fetchStats();
+      } catch (err) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.className = "mt-3 rounded-xl p-4 border border-red-500/40 bg-red-500/5";
+        document.getElementById('result-badge').textContent = "ERROR AL ESCANEAR";
+        document.getElementById('result-rationale').textContent = err.message || 'Error de red con el backend';
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Escanear';
+      }
+    });
+
+    // ==========================================
+    // Master Refresh Orchestrator
+    // ==========================================
+    function refreshAll(manual = false) {
+      const icon = document.getElementById('refresh-icon');
+      if (manual && icon) {
+        icon.classList.add('animate-spin');
+        setTimeout(() => icon.classList.remove('animate-spin'), 1000);
+      }
+
+      const now = new Date();
+      document.getElementById('last-update').textContent = `Sincronizado: ${now.toLocaleTimeString()}`;
+
+      checkHealth();
+      fetchStats();
+      fetchBrands();
+      fetchHistory();
+    }
+
+    // Initial boot
+    refreshAll();
+
+    // Auto-refresh every 15 seconds
+    setInterval(() => {
+      refreshAll(false);
+    }, 15000);
+  </script>
 </body>
 </html>

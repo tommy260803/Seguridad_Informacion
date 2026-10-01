@@ -10,6 +10,8 @@ from typing import Dict, Any
 from phishguard_ml.brand_features import extract_brand_features, PHISHING_TARGET_BRANDS
 from phishguard_ml.detection_rules import analyze_url_rules
 from phishguard_ml.features import UrlFeatureContext, FEATURE_NAMES, FEATURE_PROFILES, extract_url_features
+from phishguard_ml.homoglyphs import analyze_homoglyphs
+from phishguard_data.reputation import get_reputation
 from phishguard_data.urls import canonicalize_url
 from phishguard_data.psl import PublicSuffixList
 
@@ -81,15 +83,27 @@ class HybridM0Model:
             - rules_analysis: dict with rules results
             - model: 'M0+Brand+Rules'
         """
-        # 1. Get M0 prediction
+        # 1. Get Global Tranco Reputation & Canonical Domain
+        rep = get_reputation(url, psl=self.psl)
+        host = rep["host"]
+        reg_domain = rep["registered_domain"]
+        tranco_rank = rep["tranco_rank"]
+        trust_score = rep["trust_score"]
+        is_user_hosting = rep["is_user_hosting"]
+
+        # 2. Get Homoglyph / Punycode Confusable analysis
+        try:
+            homoglyphs_data = analyze_homoglyphs(host, reg_domain)
+        except Exception:
+            homoglyphs_data = {"is_spoofing": False, "target_brand": "none", "visual_skeleton": host}
+
+        # 3. Get M0 lexical prediction
         m0_prob = self._predict_m0(url)
         
-        # 2. Get brand analysis
+        # 4. Get brand impersonation analysis
         try:
-            parsed = __import__('urllib.parse', fromlist=['urlsplit']).urlsplit(url)
-            hostname = (parsed.hostname or "").lower()
-            brand_features = extract_brand_features(hostname)
-        except Exception as e:
+            brand_features = extract_brand_features(host)
+        except Exception:
             brand_features = {
                 "min_brand_distance": 999,
                 "closest_brand": "",
@@ -98,23 +112,33 @@ class HybridM0Model:
                 "typosquatting_score": 0.0
             }
         
-        # 3. Get rules analysis
+        # If registered domain is an authentic top-tier brand from Tranco, disable brand impersonation
+        if trust_score >= 0.85 and not is_user_hosting:
+            brand_features["is_brand_impersonation"] = 0
+            brand_features["typosquatting_score"] = 0.0
+        
+        # 5. Get rules analysis
         try:
             rules_analysis = analyze_url_rules(url, user_country=user_country)
-            rules_score = rules_analysis["aggregate_score"]
-        except Exception as e:
-            rules_analysis = {"aggregate_score": 0.0, "triggered_rules": []}
+            rules_score = rules_analysis.get("aggregate_score", 0.0)
+        except Exception:
+            rules_analysis = {"aggregate_score": 0.0, "triggered_rules": [], "all_rules": []}
             rules_score = 0.0
         
-        # 4. Check for high-signal new rules (ccTLD, geolocation, domain age, financial)
+        # High-signal rules
         high_signal_rules = {"country_code_tld", "server_geolocation", "domain_age"}
         triggered_high_signal = [
             r for r in rules_analysis.get("triggered_rules", [])
             if r.get("rule") in high_signal_rules
         ]
+        
+        # Don't penalize server_geolocation for top-tier global domains with CDN edge nodes
+        if trust_score >= 0.70 and not is_user_hosting:
+            triggered_high_signal = [r for r in triggered_high_signal if r.get("rule") != "server_geolocation"]
+            
         high_signal_boost = sum(r.get("confidence", 0) for r in triggered_high_signal) * 0.3
         
-        # Financial-specific boost (actual phishing signals only)
+        # Financial phishing boost
         financial_rules = {"financial_phishing"}
         triggered_financial = [
             r for r in rules_analysis.get("triggered_rules", [])
@@ -122,60 +146,85 @@ class HybridM0Model:
         ]
         financial_boost = sum(r.get("confidence", 0) for r in triggered_financial) * 0.4
         
-        # Brand-country mismatch is INFO only (not a phishing signal)
         brand_mismatch = next(
             (r for r in rules_analysis.get("all_rules", []) if r.get("rule") == "brand_country_mismatch"),
             None
         )
         
-        # 5. Combine predictions using intelligent fusion
         brand_score = brand_features["typosquatting_score"] if brand_features["is_brand_impersonation"] else 0.0
+
+        # 6. Intelligent Multimodal Fusion
+        # CASE A: Critical Homoglyph / Confusable Spoofing Attack
+        if homoglyphs_data.get("is_spoofing"):
+            final_prob = 0.97
+            decision = "phishing"
         
-        # Financial phishing takes highest priority
-        if financial_boost > 0.5:
-            final_prob = max(0.7 * financial_boost + 0.3 * m0_prob, m0_prob)
-        elif brand_features["is_brand_impersonation"] and brand_score > 0.7:
-            # High-confidence brand impersonation: override M0
-            final_prob = max(brand_score * 0.95, m0_prob)
+        # CASE B: Top-Tier Global Prevalent Domain (Wikipedia, Google, GitHub, Microsoft, etc.)
+        elif trust_score >= 0.70 and not is_user_hosting and not brand_features["is_brand_impersonation"]:
+            # Known authentic infrastructure. Suppress lexical M0 overfit noise.
+            max_allowed_prob = 0.08 if trust_score >= 0.88 else 0.18
+            final_prob = min(m0_prob * (1.0 - trust_score), max_allowed_prob)
+            decision = "legitimate"
+
+        # CASE C: Financial Phishing Attack (High Confidence Signals)
+        elif financial_boost > 0.5:
+            final_prob = max(0.7 * financial_boost + 0.3 * m0_prob, m0_prob, 0.85)
+            decision = "phishing"
+
+        # CASE D: Brand Impersonation on unranked / low-reputation domain
+        elif brand_features["is_brand_impersonation"] and brand_score > 0.65:
+            final_prob = max(brand_score * 0.95, m0_prob, 0.80)
+            decision = "phishing"
+
         elif brand_features["is_brand_impersonation"]:
-            # Medium-confidence brand impersonation: blend with higher weight
-            final_prob = 0.3 * m0_prob + 0.7 * brand_score
+            final_prob = 0.35 * m0_prob + 0.65 * brand_score
+            decision = "phishing" if final_prob >= 0.5 else "legitimate"
+
+        # CASE E: Rules or Infrastructure Anomalies
         elif rules_score > 0.5 or high_signal_boost > 0.3:
-            # High rules score OR high-signal rules triggered: boost probability
-            final_prob = max(0.5 * m0_prob + 0.5 * rules_score + high_signal_boost + financial_boost, m0_prob)
+            final_prob = max(0.4 * m0_prob + 0.4 * rules_score + high_signal_boost + financial_boost, m0_prob)
+            decision = "phishing" if final_prob >= 0.5 else "legitimate"
+
+        # CASE F: General / Neutral Domain
         else:
-            # Default: weighted average with financial boost
-            final_prob = 0.6 * m0_prob + 0.25 * brand_score + 0.15 * rules_score + high_signal_boost + financial_boost
-        
-        # Ensure probability is in valid range
-        final_prob = max(0.0, min(1.0, final_prob))
-        
-        decision = "phishing" if final_prob >= 0.5 else "legitimate"
-        
-        # EXACT BRAND MATCH OVERRIDE: if hostname (without TLD) is a known brand name,
-        # force decision to legitimate. Prevents M0 from flagging real brand domains.
-        try:
-            from urllib.parse import urlsplit
-            parsed_url = urlsplit(url)
-            host = (parsed_url.hostname or "").lower()
-            if host.startswith("www."):
-                host = host[4:]
-            domain_parts = host.split(".")
-            domain_name = domain_parts[0] if domain_parts else ""
-            if domain_name in _KNOWN_BRAND_NAMES:
-                decision = "legitimate"
-                final_prob = min(final_prob, 0.45)
-        except Exception:
-            pass
-        
+            base_prob = 0.65 * m0_prob + 0.20 * rules_score + high_signal_boost + financial_boost
+            # Attenuate slightly by trust score if present in Tranco
+            if trust_score > 0.0:
+                base_prob = base_prob * (1.0 - (trust_score * 0.75))
+            final_prob = max(0.0, min(1.0, base_prob))
+            decision = "phishing" if final_prob >= 0.5 else "legitimate"
+
+        # Escalate to 'warning' if foreign domain has local brand collisions or regional mismatch
+        local_sug = rules_analysis.get("local_suggestions", [])
+        geo_ctx = rules_analysis.get("geo_context", {})
+        has_brand_mismatch = bool(brand_mismatch and brand_mismatch.get("triggered"))
+        if (has_brand_mismatch or (local_sug and geo_ctx.get("is_foreign"))) and decision == "legitimate":
+            decision = "warning"
+
+        # Final sanity bounds
+        final_prob = round(max(0.0, min(1.0, final_prob)), 6)
+
+        # Risk breakdown components (0-100%) for UI visualization
+        risk_breakdown = {
+            "lexical": int(round(m0_prob * 100)),
+            "reputation_risk": int(round((1.0 - trust_score) * 100)),
+            "brand_risk": int(round(brand_score * 100)),
+            "infrastructure_risk": int(round(min(1.0, rules_score + high_signal_boost) * 100))
+        }
+
         return {
-            "probability": round(final_prob, 6),
+            "probability": final_prob,
             "decision": decision,
             "m0_probability": round(m0_prob, 6),
+            "reputation": rep,
+            "homoglyphs": homoglyphs_data,
+            "risk_breakdown": risk_breakdown,
             "brand_analysis": brand_features if brand_features["is_brand_impersonation"] else None,
             "brand_mismatch": brand_mismatch.get("details") if brand_mismatch and brand_mismatch.get("triggered") and brand_mismatch.get("details") else None,
+            "geo_context": rules_analysis.get("geo_context"),
+            "local_suggestions": rules_analysis.get("local_suggestions", []),
             "rules_analysis": rules_analysis,
-            "model": "M0+Brand+Rules"
+            "model": "M0+Tranco+Brand+Rules"
         }
     
     def _predict_m0(self, url: str) -> float:

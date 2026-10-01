@@ -3,141 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhishGuard - Sitio Bloqueado</title>
+  <title>PhishGuard Pro - Protección Activa</title>
   <style>
     :root {
-      --primary: #0284c7;
-      --primary-dark: #0369a1;
-      --danger: #dc2626;
-      --danger-dark: #b91c1c;
-      --danger-light: #fef2f2;
-      --danger-border: #fecaca;
-      --warning: #d97706;
-      --success: #16a34a;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
+      --bg-base: #080c14;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-card: rgba(56, 189, 248, 0.15);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --border: #e2e8f0;
+      
+      --color-primary: #0284c7;
+      --color-primary-glow: rgba(2, 132, 199, 0.35);
+      --color-safe: #10b981;
+      --color-safe-bg: rgba(16, 185, 129, 0.12);
+      
+      --color-warning: #f59e0b;
+      --color-warning-dark: #b45309;
+      --color-warning-bg: rgba(245, 158, 11, 0.12);
+      --color-warning-border: rgba(245, 158, 11, 0.35);
+      
+      --color-danger: #ef4444;
+      --color-danger-dark: #b91c1c;
+      --color-danger-bg: rgba(239, 68, 68, 0.12);
+      --color-danger-border: rgba(239, 68, 68, 0.35);
+      
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
 
-    * { box-sizing: border-box; }
+    :root[data-theme="light"] {
+      --bg-base: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --border-subtle: rgba(15, 23, 42, 0.1);
+      --border-card: rgba(2, 132, 199, 0.2);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      
+      --color-primary: #0284c7;
+      --color-primary-glow: rgba(2, 132, 199, 0.2);
+      --color-safe: #059669;
+      --color-safe-bg: rgba(5, 150, 105, 0.12);
+      
+      --color-warning: #d97706;
+      --color-warning-dark: #b45309;
+      --color-warning-bg: rgba(217, 119, 6, 0.1);
+      --color-warning-border: rgba(217, 119, 6, 0.35);
+      
+      --color-danger: #dc2626;
+      --color-danger-dark: #b91c1c;
+      --color-danger-bg: rgba(220, 38, 38, 0.08);
+      --color-danger-border: rgba(220, 38, 38, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: var(--bg);
-      color: var(--text);
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at 15% 15%, rgba(14, 165, 233, 0.08), transparent 45%),
+                  radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.06), transparent 45%),
+                  var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
       display: flex;
       justify-content: center;
-      min-height: 100vh;
+      padding: 36px 20px;
       overflow-y: auto;
     }
 
     .main-content {
       width: 100%;
       max-width: 960px;
-      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
 
+    /* Header Bar */
     .header-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
+      padding-bottom: 8px;
     }
 
-    .page-title {
-      font-size: 24px;
-      font-weight: 800;
-      margin: 0;
+    .brand-group {
       display: flex;
       align-items: center;
-      gap: 10px;
-      color: #0f172a;
-      letter-spacing: -0.5px;
+      gap: 12px;
     }
 
-    .page-title svg {
-      width: 32px;
-      height: 32px;
+    .logo-shield {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+      color: white;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      background: linear-gradient(90deg, #f8fafc, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
     }
 
     .shield-badge {
-      background: #e0f2fe;
-      color: var(--primary-dark);
-      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11.5px;
       font-weight: 700;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 9999px;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .page-subtitle {
-      color: var(--text-muted);
-      font-size: 14px;
-      margin: 4px 0 16px 0;
+    .shield-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
     }
 
+    .page-subtitle {
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      margin-top: -12px;
+      margin-bottom: 2px;
+    }
+
+    /* URL Inspection Strip */
     .url-bar-container {
       display: flex;
       align-items: center;
-      background: white;
-      border: 1px solid var(--border);
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-subtle);
       border-radius: 10px;
-      padding: 8px 12px;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-      gap: 10px;
+      padding: 9px 14px;
+      backdrop-filter: blur(8px);
     }
 
     .url-status-badge {
-      background: #fee2e2;
-      color: var(--danger-dark);
-      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
       font-weight: 700;
-      padding: 4px 8px;
+      padding: 4px 10px;
       border-radius: 6px;
       white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      background: var(--color-danger-bg);
+      color: #f87171;
+      border: 1px solid var(--color-danger-border);
     }
 
     .url-bar {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: var(--font-mono);
       font-size: 13px;
-      color: #334155;
+      color: #cbd5e1;
       word-break: break-all;
       flex: 1;
     }
 
+    /* Warning Hero Banner */
     .warning-banner {
-      background: var(--danger-light);
-      border: 1px solid var(--danger-border);
-      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+      border: 1px solid var(--color-danger-border);
+      border-radius: 14px;
       padding: 24px 28px;
       display: flex;
-      gap: 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.06);
+      gap: 22px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .warning-banner::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--color-danger);
     }
 
     .warning-icon-wrap {
-      width: 56px;
-      height: 56px;
-      background: var(--danger);
+      width: 52px;
+      height: 52px;
       border-radius: 12px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 28px;
-      font-weight: bold;
+      color: #ef4444;
+      font-size: 26px;
+      font-weight: 900;
       flex-shrink: 0;
-      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
     }
 
     .warning-text {
@@ -145,132 +236,228 @@
     }
 
     .warning-text h2 {
-      margin: 0 0 8px 0;
-      color: var(--danger-dark);
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
     }
 
     .warning-text p {
-      margin: 0 0 18px 0;
-      color: #334155;
-      font-size: 14.5px;
+      color: var(--text-secondary);
+      font-size: 14px;
       line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-red {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-red:hover {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      transform: translateY(-1px);
+    }
+
+    .btn-link {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      padding: 9px 16px;
+    }
+
+    .btn-link:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .risk-level-box {
-      text-align: right;
-      min-width: 140px;
-      border-left: 1px solid var(--danger-border);
-      padding-left: 20px;
+      border-left: 1px solid var(--border-subtle);
+      padding-left: 24px;
+      min-width: 150px;
       display: flex;
       flex-direction: column;
       justify-content: center;
+      text-align: right;
     }
 
     .risk-level-box h3 {
-      margin: 0 0 4px 0;
-      color: var(--text-muted);
       font-size: 11px;
       font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      margin-bottom: 4px;
     }
 
     .risk-badge {
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 900;
-      color: var(--danger);
+      color: var(--color-danger);
       line-height: 1.1;
       margin-bottom: 4px;
     }
 
     .risk-pct-sub {
-      font-size: 13px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
       font-weight: 700;
-      color: #991b1b;
-      background: #fee2e2;
-      padding: 2px 8px;
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.15);
+      padding: 3px 8px;
       border-radius: 6px;
       display: inline-block;
     }
 
-    .btn-group {
+    /* Action Recommendation Card */
+    .action-rec-card {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
       display: flex;
+      flex-direction: column;
       gap: 12px;
+    }
+
+    .action-rec-header {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
+    }
+
+    .action-rec-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .action-rec-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 6px #38bdf8;
+    }
+
+    .action-rec-country {
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+      background: rgba(51, 65, 85, 0.6);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .action-rec-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
       flex-wrap: wrap;
     }
 
-    .btn {
-      padding: 10px 22px;
+    .action-rec-details {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .action-rec-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .action-rec-sub {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .btn-action-primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: white;
+      padding: 10px 18px;
       border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 700;
-      transition: all 0.15s ease;
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      box-shadow: 0 0 16px rgba(2, 132, 199, 0.35);
+      transition: all 0.2s ease;
     }
 
-    .btn-red {
-      background-color: var(--danger);
-      color: white;
-    }
-
-    .btn-red:hover {
-      background-color: var(--danger-dark);
+    .btn-action-primary:hover {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
       transform: translateY(-1px);
     }
 
-    .btn-link {
-      background: none;
-      color: var(--text-muted);
-      text-decoration: underline;
-      padding: 8px 12px;
-      font-size: 13px;
-    }
-
-    .btn-link:hover {
-      color: var(--danger);
-    }
-
+    /* Technical Details Grid */
     .details-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 24px;
+      gap: 16px;
     }
 
     .card {
-      background: var(--card-bg);
-      border-radius: 14px;
-      padding: 22px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
     }
 
     .card h3 {
-      margin: 0 0 16px 0;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: 800;
-      color: #1e293b;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
       gap: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .detail-row {
       display: flex;
       justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 13.5px;
       align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 13px;
     }
 
     .detail-row:last-child {
@@ -279,148 +466,130 @@
     }
 
     .detail-label {
-      color: #64748b;
+      color: var(--text-secondary);
+      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-weight: 500;
     }
 
     .badge {
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
       text-align: right;
     }
 
     .badge-danger {
-      background: #fee2e2;
-      color: #b91c1c;
+      background: var(--color-danger-bg);
+      color: #f87171;
+      border: 1px solid var(--color-danger-border);
     }
 
     .badge-warning {
-      background: #fef3c7;
-      color: #b45309;
+      background: var(--color-warning-bg);
+      color: #fbbf24;
+      border: 1px solid var(--color-warning-border);
     }
 
     .badge-neutral {
-      background: #f1f5f9;
-      color: #334155;
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.2);
     }
 
     .badge-success {
-      background: #dcfce7;
-      color: #15803d;
+      background: var(--color-safe-bg);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
+    /* Why Block */
     .why-block {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: #334155;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .why-step {
       display: flex;
       gap: 10px;
-      margin-bottom: 8px;
       align-items: flex-start;
     }
 
     .why-step-num {
-      background: #e0f2fe;
-      color: #0369a1;
-      font-weight: bold;
-      border-radius: 50%;
       width: 20px;
       height: 20px;
+      border-radius: 50%;
+      background: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-size: 10.5px;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
-    .why-step:last-child {
-      margin-bottom: 0;
-    }
-
-    .preview-box {
-      background: #f8fafc;
-      border: 1px dashed #cbd5e1;
-      border-radius: 10px;
-      min-height: 160px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #64748b;
-      text-align: center;
-      padding: 20px;
-    }
-
-    .preview-box svg {
-      width: 40px;
-      height: 40px;
-      margin-bottom: 10px;
-      color: #94a3b8;
-    }
-
-    .preview-box-title {
-      font-weight: 700;
+    /* Purpose Box */
+    #page-purpose-box {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 3px solid #38bdf8;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 14px;
+      margin-bottom: 14px;
       font-size: 13px;
-      color: #475569;
-      margin-bottom: 4px;
+      color: #e2e8f0;
+      line-height: 1.55;
     }
 
-    .preview-box-desc {
-      font-size: 12px;
-      color: #94a3b8;
-      max-width: 280px;
-      line-height: 1.4;
-    }
-
+    /* Scenarios Grid */
     .scenarios-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
     }
 
     .scenario-item {
       display: flex;
-      gap: 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px 16px;
-      align-items: flex-start;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 12px 14px;
       transition: all 0.2s ease;
     }
 
     .scenario-item:hover {
-      border-color: #cbd5e1;
-      background: #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(30, 41, 59, 0.65);
     }
 
     .scenario-badge {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: #fee2e2;
-      color: #dc2626;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 13px;
+      font-size: 11px;
       flex-shrink: 0;
-      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.15);
     }
 
     .scenario-content {
@@ -428,111 +597,339 @@
     }
 
     .scenario-title {
-      display: block;
-      font-size: 13.5px;
-      color: #0f172a;
+      font-size: 12.5px;
       font-weight: 700;
-      margin-bottom: 4px;
+      color: #f1f5f9;
+      margin-bottom: 3px;
+      display: block;
     }
 
     .scenario-desc {
-      font-size: 12.5px;
-      color: #64748b;
-      line-height: 1.45;
-      margin: 0;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      line-height: 1.4;
     }
 
-    .rec-banner {
-      background: linear-gradient(to right, #eff6ff, #f8fafc);
-      border: 1px solid #bfdbfe;
-      border-left: 5px solid var(--primary);
-      padding: 20px 24px;
-      border-radius: 12px;
+    /* Sandbox Preview Box */
+    .preview-box {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px dashed rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 24px;
       display: flex;
-      gap: 16px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--text-secondary);
+      gap: 8px;
+    }
+
+    .preview-box svg {
+      width: 36px;
+      height: 36px;
+      color: #38bdf8;
+    }
+
+    .preview-box-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .preview-box-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 380px;
+      line-height: 1.45;
+    }
+
+    /* Recommendation Banner */
+    .rec-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-left: 4px solid #38bdf8;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
       align-items: flex-start;
-      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.05);
     }
 
     .rec-icon {
-      color: var(--primary);
+      color: #38bdf8;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .rec-text h4 {
-      margin: 0 0 6px 0;
-      color: #0369a1;
-      font-size: 15px;
+      font-size: 13.5px;
       font-weight: 800;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      color: #f8fafc;
+      margin-bottom: 4px;
     }
 
     .rec-text p {
-      margin: 0;
-      color: #1e293b;
-      font-size: 14px;
-      line-height: 1.6;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--bg-card-hover);
+      color: #38bdf8;
+      border-color: var(--border-card);
+    }
+
+    :root[data-theme="light"] .theme-toggle-btn {
+      background: #ffffff;
+      color: #475569;
+      border-color: rgba(15, 23, 42, 0.15);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+    }
+
+    :root[data-theme="light"] .theme-toggle-btn:hover {
+      background: #f8fafc;
+      color: #0284c7;
+    }
+
+    :root[data-theme="light"] .theme-toggle-btn .sun-icon {
+      display: none;
+    }
+    :root[data-theme="light"] .theme-toggle-btn .moon-icon {
+      display: block;
+    }
+    :root:not([data-theme="light"]) .theme-toggle-btn .sun-icon {
+      display: block;
+    }
+    :root:not([data-theme="light"]) .theme-toggle-btn .moon-icon {
+      display: none;
+    }
+
+    /* Light mode component overrides */
+    :root[data-theme="light"] body {
+      background: radial-gradient(circle at 15% 15%, rgba(14, 165, 233, 0.05), transparent 45%),
+                  radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.04), transparent 45%),
+                  var(--bg-base);
+    }
+
+    :root[data-theme="light"] .brand-title {
+      background: linear-gradient(90deg, #0f172a, #334155);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    :root[data-theme="light"] .shield-badge {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.12);
+      color: #0284c7;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+    }
+
+    :root[data-theme="light"] .url-bar-container {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.12);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    :root[data-theme="light"] .url-bar {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.1);
+      color: #0f172a;
+    }
+
+    :root[data-theme="light"] .warning-banner {
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    :root[data-theme="light"] .action-rec-card,
+    :root[data-theme="light"] .details-card,
+    :root[data-theme="light"] .rec-banner {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.1);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    }
+
+    :root[data-theme="light"] .action-rec-body {
+      background: transparent;
+    }
+
+    :root[data-theme="light"] .scenario-item {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    :root[data-theme="light"] .scenario-item:hover {
+      background: #ffffff;
+      border-color: rgba(2, 132, 199, 0.35);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+    }
+
+    :root[data-theme="light"] #page-purpose-box {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.08);
+      border-left: 3px solid #0284c7;
+      color: #334155;
+    }
+
+    :root[data-theme="light"] .why-box {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    :root[data-theme="light"] .why-box h4 {
+      color: #0f172a;
+    }
+
+    :root[data-theme="light"] .badge-detail {
+      background: #f1f5f9;
+      color: #334155;
+      border-color: rgba(15, 23, 42, 0.1);
+    }
+
+    :root[data-theme="light"] .rule-flag {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    :root[data-theme="light"] .preview-box {
+      background: #f8fafc;
+      border-color: rgba(15, 23, 42, 0.1);
+    }
+
+    :root[data-theme="light"] .preview-box-title {
+      color: #0f172a;
+    }
+
+    :root[data-theme="light"] .rec-text h4 {
+      color: #0f172a;
     }
 
     @media (max-width: 768px) {
       .details-grid { grid-template-columns: 1fr; }
       .warning-banner { flex-direction: column; }
-      .risk-level-box { text-align: left; border-left: none; padding-left: 0; border-top: 1px solid var(--danger-border); padding-top: 16px; }
+      .risk-level-box { text-align: left; border-left: none; padding-left: 0; border-top: 1px solid var(--border-subtle); padding-top: 16px; }
+      .action-rec-body { flex-direction: column; align-items: flex-start; }
     }
-
-    .spinner {
-      width: 28px;
-      height: 28px;
-      border: 3px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="main-content">
+    <!-- Header -->
     <div class="header-bar">
-      <h1 class="page-title">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L4 5V11.09C4 16.14 7.41 20.85 12 22C16.59 20.85 20 16.14 20 11.09V5L12 2Z" fill="#0284c7"/>
-          <path d="M12 4.18L18 6.43V11.09C18 15.01 15.45 18.66 12 19.82C8.55 18.66 6 15.01 6 11.09V6.43L12 4.18Z" fill="#0369a1"/>
-          <path d="M10.5 14.5L7.5 11.5L8.91 10.09L10.5 11.67L15.09 7.09L16.5 8.5L10.5 14.5Z" fill="white"/>
-        </svg>
-        PhishGuard
-      </h1>
-      <span class="shield-badge">Escudo Activo</span>
+      <div class="brand-group">
+        <div class="logo-shield">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">PhishGuard <span style="font-weight: 400; font-size: 15px; color: #38bdf8;">Pro</span></h1>
+          <span class="brand-sub">Sistema de Intervención y Seguridad Multimodal</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle-btn" title="Alternar Modo Claro / Oscuro" aria-label="Alternar tema">
+          <svg class="theme-icon sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <div class="shield-badge">
+          <span class="shield-dot"></span>
+          <span>Escudo Activo</span>
+        </div>
+      </div>
     </div>
-    <p class="page-subtitle">Protección de navegación inteligente en tiempo real contra sitios fraudulentos.</p>
+    
+    <p class="page-subtitle">Inspección forense en tiempo real y protección contra suplantación o desvíos.</p>
 
-    <!-- Barra de URL -->
+    <!-- Barra de URL Inspeccionada -->
     <div class="url-bar-container">
-      <span class="url-status-badge">⚠️ Peligro</span>
+      <span class="url-status-badge">⚠️ Pausa Preventiva</span>
       <div class="url-bar" id="url-display">Cargando enlace...</div>
     </div>
 
-    <!-- Banner Principal de Peligro -->
+    <!-- Banner Principal de Alerta / Advertencia -->
     <div class="warning-banner">
       <div class="warning-icon-wrap">!</div>
       <div class="warning-text">
-        <h2 id="main-title">Peligro: Suplantación de identidad detectada</h2>
-        <p id="main-desc">Este enlace presenta características sospechosas consistentes con ataques de phishing y robo de credenciales. Se recomienda no interactuar con el sitio ni ingresar contraseñas.</p>
+        <h2 id="main-title">Precaución: Dominio no vinculado a tu entidad bancaria</h2>
+        <p id="main-desc">Has intentado ingresar a un dominio foráneo que no guarda relación oficial con la entidad financiera reconocida de tu país. Se ha pausado la navegación para proteger tus datos.</p>
         <div class="btn-group">
           <button class="btn btn-red" id="btn-close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
             Cerrar pestaña (Seguro)
           </button>
-          <button class="btn btn-link" id="btn-ignore">Continuar de todos modos (No recomendado)</button>
+          <button class="btn btn-link" id="btn-ignore">Continuar a este sitio bajo mi propia responsabilidad</button>
         </div>
       </div>
       <div class="risk-level-box">
-        <h3>Nivel de Riesgo</h3>
-        <div class="risk-badge" id="risk-text">ALTO</div>
-        <div><span class="risk-pct-sub" id="risk-pct-banner">100.0%</span></div>
+        <h3>Nivel de Alerta</h3>
+        <div class="risk-badge" id="risk-text">PRECAUCIÓN</div>
+        <div><span class="risk-pct-sub" id="risk-pct-banner">--%</span></div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Destino Oficial Recomendado -->
+    <div class="action-rec-card" id="action-rec-card" style="display: none;">
+      <div class="action-rec-header">
+        <div class="action-rec-pill">
+          <span class="action-rec-dot"></span>
+          <span>PORTAL OFICIAL CERTIFICADO EN TU PAÍS</span>
+        </div>
+        <span class="action-rec-country" id="action-rec-country">Perú</span>
+      </div>
+      <div class="action-rec-body">
+        <div class="action-rec-details">
+          <div class="action-rec-name" id="action-rec-name">Banco de Crédito del Perú</div>
+          <div class="action-rec-sub" id="action-rec-sub">Canal oficial verificado para operaciones bancarias y consulta de cuentas</div>
+        </div>
+        <a href="#" class="btn-action-primary" id="btn-go-official">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span id="btn-official-text">Ir al sitio oficial seguro ↗</span>
+        </a>
       </div>
     </div>
 
@@ -542,62 +939,63 @@
       <div class="card">
         <h3>🔍 Evidencias Técnicas Reales</h3>
         <div class="detail-row">
-          <span class="detail-label">🌐 Dominio analizado</span>
+          <span class="detail-label">🌐 Dominio inspeccionado</span>
           <span class="badge badge-neutral" id="domain-val">Extrayendo...</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">🎯 Marca Suplantada</span>
-          <span class="badge badge-danger" id="brand-val">Analizando con IA...</span>
+          <span class="detail-label">🎯 Entidad de Referencia</span>
+          <span class="badge badge-warning" id="brand-val">Analizando con IA...</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">🔒 Protocolo / SSL</span>
-          <span class="badge badge-warning" id="ssl-val">Verificando...</span>
+          <span class="badge badge-neutral" id="ssl-val">Verificando...</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">📍 Ubicación del Servidor</span>
           <span class="badge badge-neutral" id="geo-val">Verificando...</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">📅 Edad del Dominio</span>
+          <span class="detail-label">📅 Antigüedad Registral</span>
           <span class="badge badge-neutral" id="age-val">Verificando...</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">⚠️ Tipo de Amenaza</span>
-          <span class="badge badge-danger" id="threat-val">Phishing / Falsificación</span>
+          <span class="detail-label">⚠️ Clasificación Forense</span>
+          <span class="badge badge-warning" id="threat-val">Evaluando...</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">🤖 Probabilidad Phishing</span>
-          <span class="badge badge-danger" id="prob-val">100.0%</span>
+          <span class="detail-label">🤖 Probabilidad de Riesgo</span>
+          <span class="badge badge-warning" id="prob-val">--%</span>
         </div>
       </div>
 
-      <!-- Tarjeta 2: Por qué se dio este porcentaje -->
+      <!-- Tarjeta 2: Criterio Forense -->
       <div class="card">
-        <h3>📊 ¿Por qué se asignó este porcentaje?</h3>
+        <h3>📊 Diagnóstico del Motor Multimodal</h3>
         <div class="why-block">
           <div class="why-step">
             <span class="why-step-num">1</span>
-            <div><b>Modelo M0 (URL):</b> Evaluación de tokens léxicos, longitud, entropía y similitud de dominios.</div>
+            <div><b>Inspección de Marca y Dominio:</b> Se contrastan las siglas y nombres contra la base oficial de entidades registradas.</div>
           </div>
           <div class="why-step">
             <span class="why-step-num">2</span>
-            <div><b>Agente IA:</b> Verificación semántica de suplantación de marca y contexto fraudulento.</div>
+            <div><b>Geolocalización e Infraestructura:</b> Se verifica si el servidor opera en la jurisdicción bancaria del usuario o en el extranjero.</div>
           </div>
           <div class="why-step">
             <span class="why-step-num">3</span>
-            <div><b>Decisión:</b> Orquestador adaptativo confirmó con alta certeza la naturaleza maliciosa.</div>
+            <div><b>Veredicto Preventivo:</b> Se evita la exposición innecesaria de credenciales bancarias en infraestructuras ajenas.</div>
           </div>
-          <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; font-style: italic; color: #475569;" id="why-percentage-desc">
-            Calculando desglose del score de riesgo...
+          <div style="margin-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.08); padding-top: 8px; font-style: italic; color: #94a3b8;" id="why-percentage-desc">
+            Calculando desglose forense...
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Vista previa y Aislamiento -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
-        <h3 style="margin-bottom: 0;">🛡️ Vista Previa del sitio</h3>
+    <!-- Vista previa y Aislamiento en Sandbox -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h3>🛡️ Entorno Aislado Preventivo</h3>
+        <span class="badge badge-neutral">Sandbox Seguro</span>
       </div>
       <div id="preview-container" class="preview-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -605,49 +1003,49 @@
           <path d="M12 8v4"/>
           <circle cx="12" cy="16" r="1"/>
         </svg>
-        <div class="preview-box-title">Sitio Aislado Preventivamente</div>
-        <div class="preview-box-desc">Se impidió la ejecución de scripts, cookies y formularios para salvaguardar tu seguridad antes de ingresar.</div>
+        <div class="preview-box-title">Navegación en Cuarentena Preventiva</div>
+        <div class="preview-box-desc">Se bloqueó la ejecución de scripts, recolección de telemetría y envío de formularios para salvaguardar tu seguridad antes de continuar.</div>
       </div>
     </div>
 
-    <!-- Análisis en Profundidad y Escenarios de Riesgo -->
-    <div class="card" id="scenarios-card" style="margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
-        <h3 style="margin-bottom: 0;">⚡ Mecánica de Ataque y Escenarios de Riesgo</h3>
-        <span class="badge badge-danger" style="font-size: 11px;">Contexto Real Extraído</span>
+    <!-- Análisis de Escenarios y Riesgos -->
+    <div class="card" id="scenarios-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+        <h3>⚡ Análisis de Contexto y Escenarios de Riesgo</h3>
+        <span class="badge badge-warning" style="font-size: 11px;">Contexto Extraído</span>
       </div>
 
-      <!-- Resumen contextual de lo que trata este sitio -->
-      <div id="page-purpose-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13.5px; color: #334155; line-height: 1.5;">
-        <b style="color: #0f172a;">Propósito detectado del portal:</b> <span id="page-purpose-text">Extrayendo el propósito del portal a partir del contenido de la página...</span>
+      <!-- Resumen contextual del propósito -->
+      <div id="page-purpose-box">
+        <b style="color: #f8fafc;">Diagnóstico contextual:</b> <span id="page-purpose-text">Analizando el contexto del dominio respecto a tu ubicación...</span>
       </div>
 
       <!-- Subtítulo de escenarios -->
-      <div style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-        <span>🎯 ¿Qué ocurriría si ingresas información o interactúas con este sitio?</span>
+      <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+        <span>🎯 Implicaciones de seguridad al interactuar con este sitio:</span>
       </div>
 
       <div id="scenarios-grid" class="scenarios-grid">
         <div class="scenario-item">
           <div class="scenario-badge">1</div>
           <div class="scenario-content">
-            <span class="scenario-title">Robo y Captura de Información</span>
-            <p class="scenario-desc">Evaluando los campos de entrada y formularios detectados...</p>
+            <span class="scenario-title">Verificación de credenciales</span>
+            <p class="scenario-desc">Evaluando los riesgos de autenticación...</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Banner de Recomendación de IA -->
+    <!-- Banner de Recomendación Final -->
     <div class="rec-banner">
       <div class="rec-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
         </svg>
       </div>
       <div class="rec-text">
-        <h4>💡 Recomendación de Seguridad de PhishGuard AI</h4>
-        <p id="rec-value">Consultando las recomendaciones personalizadas de la Inteligencia Artificial...</p>
+        <h4>💡 Recomendación de Seguridad de PhishGuard Pro</h4>
+        <p id="rec-value">Consultando las pautas recomendadas para este destino...</p>
       </div>
     </div>
   </div>

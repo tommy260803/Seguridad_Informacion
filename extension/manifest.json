@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PhishGuard Research",
-  "version": "0.1.0",
-  "description": "Cliente experimental para consultar análisis seguro de URLs.",
+  "name": "PhishGuard Pro - Detección Multimodal de Phishing",
+  "version": "1.2.0",
+  "description": "Protección activa contra phishing en tiempo real con Tranco Top 1M, detección de homóglifos, IA explicable y detonación en sandbox.",
   "permissions": ["activeTab", "storage", "webNavigation", "tabs"],
   "host_permissions": ["http://localhost:*/*", "http://127.0.0.1:*/*", "https://ipwho.is/*", "<all_urls>"],
   "background": {"service_worker": "background.js", "type": "module"},

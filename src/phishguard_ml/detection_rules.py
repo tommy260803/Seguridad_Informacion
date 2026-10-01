@@ -53,43 +53,14 @@ class DetectionRules:
         "com", "net", "org", "edu", "gov", "mil", "int"
     })
 
-    # High-risk country-code TLDs (ccTLDs) - commonly abused in phishing
+    # High-risk ccTLDs - historically abused anonymous/free registration domains (Freenom)
     HIGH_RISK_CCTLDS = frozenset({
-        "cn",   # China - high volume phishing
-        "ru",   # Russia - high volume phishing
-        "br",   # Brazil - high volume phishing
-        "in",   # India - growing phishing
-        "id",   # Indonesia - growing phishing
-        "vn",   # Vietnam - growing phishing
-        "ph",   # Philippines - growing phishing
-        "ng",   # Nigeria - high fraud association
-        "pk",   # Pakistan - growing phishing
-        "eg",   # Egypt - growing phishing
-        "co",   # Colombia - commonly spoofed
-        "tk",   # Tokelau - free domains, heavily abused
-        "ml",   # Mali - free domains, heavily abused
-        "ga",   # Gabon - free domains, heavily abused
-        "cf",   # Central African Republic - free domains, heavily abused
-        "gq",   # Equatorial Guinea - free domains, heavily abused
+        "tk", "ml", "ga", "cf", "gq"
     })
 
-    # Medium-risk ccTLDs - moderate phishing association
+    # Medium-risk ccTLDs - legacy or cheap registration domains with moderate abuse history
     MEDIUM_RISK_CCTLDS = frozenset({
-        "xyz",  # Generic but frequently abused
-        "cc",   # Cocos Islands - cheap registration
-        "ws",   # Samoa - cheap registration
-        "su",   # Soviet Union legacy - abuse-prone
-        "to",   # Tonga - commonly used for redirects
-        "la",   # Laos - commonly used for shorteners
-        "me",   # Montenegro - personal sites, some abuse
-        "tv",   # Tuvalu - media sites, some abuse
-        "im",   # Isle of Man - some abuse
-        "pm",   # Saint Pierre and Miquelon
-        "re",   # Reunion
-        "yt",   # Mayotte
-        "wf",   # Wallis and Futuna
-        "bl",   # Saint Barthelemy
-        "mf",   # Saint Martin
+        "cc", "ws", "su", "to", "la"
     })
     
     # Suspicious path keywords
@@ -130,15 +101,20 @@ class DetectionRules:
 
     # Config loaded from external JSON file (no hardcoding)
     BRAND_COUNTRY_MAP = {}
+    OFFICIAL_DOMAINS_MAP = {}
+    MULTI_COUNTRY_BRANDS = {}
     COUNTRY_NAMES = {}
     COUNTRY_CODE_MAP = {}  # Maps 2-letter codes to config keys (PE → PERU)
+    KEY_TO_CODE_MAP = {}   # Maps config keys to 2-letter codes (PERU → PE)
+    RAW_BRANDS_CONFIG = {} # Raw brand tree per country
     
     @classmethod
     def _normalize_country_code(cls, code: str) -> str:
         """Convert a 2-letter country code to the config key format (PE → PERU)."""
         if not cls.COUNTRY_CODE_MAP:
             cls._load_brand_config()
-        return cls.COUNTRY_CODE_MAP.get(code.upper(), code.upper())
+        clean = (code or "").strip().upper().replace(" ", "_")
+        return cls.COUNTRY_CODE_MAP.get(clean, clean)
     
     @classmethod
     def _load_brand_config(cls) -> None:
@@ -160,31 +136,54 @@ class DetectionRules:
                     with open(config_path, "r", encoding="utf-8-sig") as f:
                         data = json.load(f)
                     
-                    # Flatten nested structure: brands -> country -> brand_key -> info
-                    # Into: brand_key -> {expected_countries, ...}
                     raw_brands = data.get("brands", {})
                     flat_brands = {}
+                    official_map = {}
+                    multi_country = {}
+
                     for country_code, country_brands in raw_brands.items():
                         if not isinstance(country_brands, dict):
                             continue
                         for brand_key, brand_info in country_brands.items():
                             if not isinstance(brand_info, dict):
                                 continue
+                            
+                            local_domain = brand_info.get("local_domain", "").strip().lower()
+                            base_brand = brand_key.split("_")[0]
+                            full_name = brand_info.get("full_name", brand_key)
+                            category = brand_info.get("category", "bank")
+                            
+                            if local_domain:
+                                clean_ld = local_domain.replace("www.", "")
+                                official_map[clean_ld] = {
+                                    "brand_key": brand_key,
+                                    "base_brand": base_brand,
+                                    "full_name": full_name,
+                                    "country": country_code,
+                                    "local_domain": local_domain,
+                                    "category": category
+                                }
+                                if base_brand not in multi_country:
+                                    multi_country[base_brand] = {}
+                                multi_country[base_brand][country_code] = local_domain
+
                             # Build expected_countries from parent country group
                             if brand_key not in flat_brands:
                                 flat_brands[brand_key] = {
                                     "expected_countries": [country_code],
-                                    "full_name": brand_info.get("full_name", brand_key),
-                                    "local_domain": brand_info.get("local_domain", ""),
-                                    "category": brand_info.get("category", "unknown"),
+                                    "full_name": full_name,
+                                    "local_domain": local_domain,
+                                    "category": category,
                                     "also_known_as": brand_info.get("also_known_as", []),
                                 }
                             else:
-                                # Brand exists in multiple countries (e.g., Scotiabank)
                                 flat_brands[brand_key]["expected_countries"].append(country_code)
                     
                     cls.BRAND_COUNTRY_MAP = flat_brands
+                    cls.OFFICIAL_DOMAINS_MAP = official_map
+                    cls.MULTI_COUNTRY_BRANDS = multi_country
                     cls.COUNTRY_NAMES = data.get("countries", {})
+                    cls.RAW_BRANDS_CONFIG = raw_brands
                     
                     # Build 2-letter code → config key mapping (PE → PERU, CR → COSTA_RICA)
                     country_keys = set(raw_brands.keys())
@@ -194,6 +193,7 @@ class DetectionRules:
                         if config_key in country_keys:
                             code_map[code] = config_key
                     cls.COUNTRY_CODE_MAP = code_map
+                    cls.KEY_TO_CODE_MAP = {v: k for k, v in code_map.items()}
                     
                     return
                 except (json.JSONDecodeError, IOError):
@@ -201,8 +201,12 @@ class DetectionRules:
         
         # Fallback: empty config (no brands to match)
         cls.BRAND_COUNTRY_MAP = {}
+        cls.OFFICIAL_DOMAINS_MAP = {}
+        cls.MULTI_COUNTRY_BRANDS = {}
         cls.COUNTRY_NAMES = {}
         cls.COUNTRY_CODE_MAP = {}
+        cls.KEY_TO_CODE_MAP = {}
+        cls.RAW_BRANDS_CONFIG = {}
     
     def analyze(self, url: str, user_country: str = "") -> List[RuleResult]:
         """
@@ -698,21 +702,18 @@ class DetectionRules:
         """
         Detect brand-country mismatch from the USER's perspective.
         
-        If user is in Peru and visits bbva.mx, we check:
-        - Brand detected: BBVA
-        - Does BBVA have a version for Peru? Yes → bbva.pe
-        - Is the user visiting the Peru version? No → mismatch
+        CRITICAL DESIGN RULE:
+        A mismatch ONLY occurs when the user visits a VERIFIED OFFICIAL DOMAIN of a
+        multinational brand that belongs to a DIFFERENT country than the user's location.
+        Example: User in Peru visiting official Mexican BBVA (bbva.mx) instead of Peru (bbva.pe).
+        
+        Unrelated third-party domains (e.g., bcp.com in China, gnb.com, bci.com) that share 
+        short acronyms or words with a bank are NOT regional versions and MUST NOT trigger this rule.
         """
         self._load_brand_config()
         
-        # Normalize user_country from 2-letter code (PE) to config key (PERU)
-        if user_country:
-            normalized = self._normalize_country_code(user_country)
-            if normalized:
-                user_country = normalized
-        
-        parts = hostname.replace("www.", "").split(".")
-        if len(parts) < 2:
+        clean_host = hostname.replace("www.", "").strip().lower()
+        if not clean_host or "." not in clean_host:
             return RuleResult(
                 rule_name="brand_country_mismatch",
                 triggered=False,
@@ -720,177 +721,107 @@ class DetectionRules:
                 reason="Dominio no analizable"
             )
         
-        domain_label = parts[0].lower()
+        # 1. Check if the current hostname (or its registrable domain) is an official cataloged domain
+        matched_official = self.OFFICIAL_DOMAINS_MAP.get(clean_host)
+        if not matched_official:
+            parts = clean_host.split(".")
+            # Check eTLD+1 or eTLD+2 (e.g. banca.bbva.pe -> bbva.pe, portal.bbva.com.mx -> bbva.com.mx)
+            for i in range(1, len(parts) - 1):
+                sub_candidate = ".".join(parts[i:])
+                if sub_candidate in self.OFFICIAL_DOMAINS_MAP:
+                    matched_official = self.OFFICIAL_DOMAINS_MAP[sub_candidate]
+                    break
         
-        # Find ALL brands that match this hostname
-        candidates = []
-        for brand_key, brand_info in self.BRAND_COUNTRY_MAP.items():
-            base_brand = brand_key.split("_")[0] if "_" in brand_key else brand_key
-            if (domain_label == brand_key or 
-                domain_label == base_brand or 
-                brand_key in domain_label or
-                base_brand in domain_label):
-                if len(base_brand) >= 3:
-                    candidates.append((brand_key, brand_info))
-        
-        if not candidates:
+        # If the domain is NOT an official domain of ANY brand in our knowledge base,
+        # it CANNOT be a regional version of any bank. Rule does NOT trigger.
+        if not matched_official:
             return RuleResult(
                 rule_name="brand_country_mismatch",
                 triggered=False,
                 confidence=0.0,
-                reason="Marca conocida no detectada en el dominio"
+                reason="Marca bancaria conocida no detectada en el dominio"
             )
         
-        # If user country provided, find the brand version for THEIR country
-        matched_brand = None
-        matched_info = None
+        # 2. It IS an official banking portal. Check user country context.
+        portal_country = matched_official["country"]
+        base_brand = matched_official["base_brand"]
+        full_name = matched_official["full_name"]
+        category = matched_official["category"]
+        official_domain = matched_official["local_domain"]
         
-        if user_country:
-            for brand_key, brand_info in candidates:
-                if user_country in brand_info.get("expected_countries", []):
-                    matched_brand = brand_key
-                    matched_info = brand_info
-                    break
+        portal_country_name = self.COUNTRY_NAMES.get(portal_country, portal_country)
         
-        # Fallback: use TLD-based matching
-        if not matched_brand:
-            tld_country_map = {
-                ".pe": "PERU", ".mx": "MEXICO", ".co": "COLOMBIA", ".cl": "CHILE",
-                ".ar": "ARGENTINA", ".br": "BRASIL", ".ec": "ECUADOR", ".bo": "BOLIVIA",
-                ".pa": "PANAMA", ".cr": "COSTA_RICA", ".gt": "GUATEMALA",
-                ".hn": "HONDURAS", ".sv": "EL_SALVADOR", ".do": "REPUBLICA_DOMINICANA"
-            }
-            tld_country = None
-            for tld_suffix, country in tld_country_map.items():
-                if hostname.endswith(tld_suffix):
-                    tld_country = country
-                    break
-            if tld_country:
-                for brand_key, brand_info in candidates:
-                    if tld_country in brand_info.get("expected_countries", []):
-                        matched_brand = brand_key
-                        matched_info = brand_info
-                        break
-            if not matched_brand:
-                matched_brand, matched_info = candidates[0]
-        
-        expected_countries = matched_info["expected_countries"]
-        full_name = matched_info["full_name"]
-        local_domain = matched_info.get("local_domain", "")
-        category = matched_info.get("category", "")
-        expected_names = [self.COUNTRY_NAMES.get(c, c) for c in expected_countries[:3]]
-        
-        brand_details = {
-            "brand_key": matched_brand,
-            "brand_full_name": full_name,
-            "category": category,
-            "local_domain": local_domain,
-            "expected_countries": expected_countries,
-            "expected_country_names": expected_names,
-            "current_domain": hostname,
-            "suggestion": f"Visita {local_domain} directamente" if local_domain else ""
-        }
-        
-        # No user country → can't compare
         if not user_country:
             return RuleResult(
                 rule_name="brand_country_mismatch",
                 triggered=False,
                 confidence=0.0,
-                reason="Pais del usuario no disponible para comparar",
-                details=brand_details
+                reason="País del usuario no especificado para comparar",
+                details={
+                    "is_official": True,
+                    "brand_full_name": full_name,
+                    "portal_country": portal_country
+                }
             )
         
-        # Determine hostname TLD country
-        tld_country_map = {
-            ".pe": "PERU", ".mx": "MEXICO", ".co": "COLOMBIA", ".cl": "CHILE",
-            ".ar": "ARGENTINA", ".br": "BRASIL", ".ec": "ECUADOR", ".bo": "BOLIVIA",
-            ".pa": "PANAMA", ".cr": "COSTA_RICA", ".gt": "GUATEMALA",
-            ".hn": "HONDURAS", ".sv": "EL_SALVADOR", ".do": "REPUBLICA_DOMINICANA"
-        }
-        GENERIC_TLDS = {".com", ".net", ".org", ".info", ".biz", ".co", ".io"}
+        normalized_user_country = self._normalize_country_code(user_country)
+        user_country_name = self.COUNTRY_NAMES.get(normalized_user_country, normalized_user_country)
         
-        hostname_tld_country = None
-        hostname_has_generic_tld = False
-        for tld_suffix, country in tld_country_map.items():
-            if hostname.endswith(tld_suffix):
-                hostname_tld_country = country
-                break
-        if not hostname_tld_country:
-            for gtld in GENERIC_TLDS:
-                if hostname.endswith(gtld):
-                    hostname_has_generic_tld = True
-                    break
+        # 3. User is visiting the local official version for their own country
+        if normalized_user_country == portal_country:
+            return RuleResult(
+                rule_name="brand_country_mismatch",
+                triggered=False,
+                confidence=0.0,
+                reason=f"Usuario en {user_country_name} visitando versión local oficial de {full_name}",
+                details={
+                    "is_official": True,
+                    "brand_key": matched_official["brand_key"],
+                    "brand_full_name": full_name,
+                    "category": category,
+                    "local_domain": official_domain,
+                    "current_domain": clean_host
+                }
+            )
         
-        # Collect ALL countries where this brand operates (from all candidates)
-        all_brand_countries = set()
-        for _, ci in candidates:
-            for c in ci.get("expected_countries", []):
-                all_brand_countries.add(c)
+        # 4. User is in Country A, visiting official portal of Country B
+        # Does this brand have an official branch in the user's country?
+        brand_branches = self.MULTI_COUNTRY_BRANDS.get(base_brand, {})
+        user_country_local_domain = brand_branches.get(normalized_user_country)
         
-        # Brand doesn't operate in the hostname's TLD country → different entity
-        if hostname_tld_country and hostname_tld_country not in all_brand_countries:
-            brand_details["suggestion"] = f"Si buscas {full_name}, visita {local_domain} directamente" if local_domain else ""
-            brand_details["is_different_entity"] = True
+        if user_country_local_domain:
+            # Genuine mismatch: Brand operates in both countries with different domains
+            brand_details = {
+                "is_official": True,
+                "brand_key": matched_official["brand_key"],
+                "brand_full_name": full_name,
+                "category": category,
+                "local_domain": user_country_local_domain,
+                "current_domain": clean_host,
+                "portal_country": portal_country,
+                "user_country": normalized_user_country,
+                "suggestion": f"Si buscas {full_name} en {user_country_name}, visita directamente https://{user_country_local_domain}"
+            }
             return RuleResult(
                 rule_name="brand_country_mismatch",
                 triggered=True,
-                confidence=0.4,
-                reason=f"{hostname} es una entidad diferente a {full_name} (no es una filial regional)",
+                confidence=0.45,
+                reason=f"Usuario en {user_country_name} visitando versión oficial de {full_name} ({portal_country_name}). Versión oficial local: {user_country_local_domain}",
                 details=brand_details
             )
-        
-        # For generic TLDs (.com, .net), check if brand has country-specific domains.
-        if hostname_has_generic_tld and local_domain:
-            clean_local = local_domain.replace("www.", "").lower()
-            local_has_country_tld = any(clean_local.endswith(tld) for tld in tld_country_map)
-            if local_has_country_tld:
-                brand_details["suggestion"] = f"Si buscas {full_name}, visita {local_domain} directamente"
-                brand_details["is_different_entity"] = True
-                return RuleResult(
-                    rule_name="brand_country_mismatch",
-                    triggered=True,
-                    confidence=0.4,
-                    reason=f"{hostname} es una entidad diferente a {full_name} (dominio generico)",
-                    details=brand_details
-                )
-        
-        # Find the user's country version of this brand
-        user_country_name = self.COUNTRY_NAMES.get(user_country, user_country)
-        
-        user_country_local_domain = None
-        for _, ci in candidates:
-            if user_country in ci.get("expected_countries", []):
-                user_country_local_domain = ci.get("local_domain")
-                break
-        
-        # If user has a local version, check if hostname matches it
-        if user_country_local_domain:
-            clean_host = hostname.replace("www.", "").lower()
-            clean_user_local = user_country_local_domain.replace("www.", "").lower()
-            if clean_host == clean_user_local:
-                return RuleResult(
-                    rule_name="brand_country_mismatch",
-                    triggered=False,
-                    confidence=0.0,
-                    reason=f"Usuario en {user_country_name} visitando version local correcta de {full_name}",
-                    details=brand_details
-                )
-        
-        # Mismatch! User is visiting a different version of the brand
-        if user_country_local_domain:
-            brand_details["suggestion"] = f"Si buscas {full_name}, visita {user_country_local_domain} directamente"
         else:
-            brand_details["suggestion"] = f"{full_name} no tiene una version en {user_country_name}. Verifica que este sitio sea el que buscas."
-        brand_details["local_domain"] = user_country_local_domain or local_domain
-        
-        return RuleResult(
-            rule_name="brand_country_mismatch",
-            triggered=True,
-            confidence=0.75,
-            reason=f"Usuario en {user_country_name} visitando versión de {full_name} para otro país. Versión local: {local_domain}",
-            details=brand_details
-        )
+            # Brand is legitimate but does not operate in user's country (e.g., Peruvian user on Banco de Chile)
+            return RuleResult(
+                rule_name="brand_country_mismatch",
+                triggered=False,
+                confidence=0.0,
+                reason=f"Portal oficial legítimo de {full_name} ({portal_country_name})",
+                details={
+                    "is_official": True,
+                    "brand_full_name": full_name,
+                    "portal_country": portal_country
+                }
+            )
     
     # Financial-specific phishing keywords (Spanish + English)
     FINANCIAL_KEYWORDS = frozenset({
@@ -1008,6 +939,191 @@ class DetectionRules:
         
         return score, summary
 
+    def get_geo_context(self, hostname: str, user_country: str = "") -> Dict[str, any]:
+        """
+        Determines the geographical origin of the domain/server and compares it
+        against the user's configured country.
+        """
+        self._load_brand_config()
+        clean_host = (hostname or "").replace("www.", "").strip().lower()
+        if not clean_host:
+            return {
+                "user_country": "",
+                "user_country_name": "",
+                "origin_country": "UNKNOWN",
+                "origin_country_name": "Desconocido",
+                "is_foreign": False,
+                "ip": "",
+                "isp": "",
+                "message": "Dominio no analizable"
+            }
+        
+        # 1. Geolocation of server IP (using cached or fresh check)
+        geo_rule = self._check_server_geolocation(clean_host)
+        geo_details = geo_rule.details or {}
+        
+        server_cc = (geo_details.get("country_code") or "").upper()
+        server_name = geo_details.get("country") or ""
+        ip = geo_details.get("ip") or ""
+        isp = geo_details.get("isp") or ""
+        
+        # 2. Check if ccTLD explicitly specifies a country
+        tld_cc = ""
+        host_parts = clean_host.split(".")
+        if len(host_parts) >= 2:
+            last_part = host_parts[-1].upper()
+            if last_part in self.COUNTRY_NAMES:
+                tld_cc = last_part
+                
+        origin_code = tld_cc or server_cc or "UNKNOWN"
+        origin_name = self.COUNTRY_NAMES.get(origin_code, server_name or origin_code)
+        
+        # 3. User country normalization
+        norm_user_key = self._normalize_country_code(user_country) if user_country else ""
+        user_cc = ""
+        user_name = ""
+        if norm_user_key:
+            user_cc = self.KEY_TO_CODE_MAP.get(norm_user_key, user_country.upper())
+            user_name = self.COUNTRY_NAMES.get(user_cc, norm_user_key.title())
+            
+        is_foreign = False
+        if user_cc and origin_code and origin_code != "UNKNOWN":
+            is_foreign = (origin_code != user_cc and norm_user_key != origin_code)
+            
+        if is_foreign and origin_name and user_name:
+            message = f"Servidor alojado en {origin_name} ({origin_code}) | Tu ubicación: {user_name} ({user_cc})"
+        elif origin_name and origin_name != "UNKNOWN":
+            message = f"Servidor alojado en {origin_name} ({origin_code})"
+        else:
+            message = "Ubicación geográfica del servidor no identificada"
+            
+        return {
+            "user_country": user_cc,
+            "user_country_name": user_name,
+            "origin_country": origin_code,
+            "origin_country_name": origin_name,
+            "is_foreign": is_foreign,
+            "ip": ip,
+            "isp": isp,
+            "message": message
+        }
+
+    def find_local_brand_suggestions(self, hostname: str, user_country: str = "") -> List[Dict[str, any]]:
+        """
+        Identify if a foreign/visited domain has lexical, acronym, or phonetic
+        similarity to any official banking or financial entities in the user's country.
+        Example: bcp.com visited in Peru -> recommends viabcp.com (Banco de Crédito del Perú).
+        """
+        self._load_brand_config()
+        if not user_country:
+            return []
+            
+        clean_host = (hostname or "").replace("www.", "").strip().lower()
+        if not clean_host or "." not in clean_host:
+            return []
+            
+        country_key = self._normalize_country_code(user_country)
+        country_brands = self.RAW_BRANDS_CONFIG.get(country_key, {})
+        if not country_brands:
+            return []
+            
+        user_cc = self.KEY_TO_CODE_MAP.get(country_key, user_country.upper())
+        user_name = self.COUNTRY_NAMES.get(user_cc, country_key.title())
+        
+        # Extract stem/label from clean_host
+        parts = clean_host.split(".")
+        if len(parts) >= 3 and parts[-1] in {"pe", "mx", "co", "cl", "ar", "br", "ec", "bo", "uk"} and parts[-2] in {"com", "gob", "org", "net", "edu", "co"}:
+            stem = parts[-3]
+        elif len(parts) >= 2:
+            stem = parts[-2]
+        else:
+            stem = parts[0]
+            
+        stopwords = {"de", "del", "la", "el", "los", "las", "y", "en", "para", "por"}
+        suggestions = []
+        
+        from phishguard_ml.brand_features import _levenshtein_distance, _jaro_similarity
+        
+        for brand_key, brand_info in country_brands.items():
+            if not isinstance(brand_info, dict):
+                continue
+            local_domain = brand_info.get("local_domain", "").strip().lower().replace("www.", "")
+            if not local_domain:
+                continue
+                
+            # If the user is ALREADY visiting the official local domain, no suggestion needed
+            if clean_host == local_domain or clean_host.endswith("." + local_domain):
+                return []
+                
+            full_name = brand_info.get("full_name", brand_key)
+            category = brand_info.get("category", "bank")
+            aliases = [a.lower().strip() for a in brand_info.get("also_known_as", [])]
+            base_key = brand_key.split("_")[0].lower()
+            
+            # Extract stem of local_domain
+            ld_parts = local_domain.split(".")
+            if len(ld_parts) >= 3 and ld_parts[-1] in {"pe", "mx", "co", "cl", "ar", "br", "ec", "bo", "uk"} and ld_parts[-2] in {"com", "gob", "org", "net", "edu", "co"}:
+                ld_stem = ld_parts[-3]
+            elif len(ld_parts) >= 2:
+                ld_stem = ld_parts[-2]
+            else:
+                ld_stem = ld_parts[0]
+                
+            # Compute initials/acronym from full_name
+            name_words = [w for w in full_name.lower().split() if w not in stopwords]
+            acronym = "".join(w[0] for w in name_words if w)
+            
+            matched = False
+            match_reason = ""
+            confidence = 0.0
+            
+            # 1. Exact match on acronym, brand key, or alias
+            if stem == base_key:
+                matched = True
+                confidence = 0.98
+                match_reason = f"La sigla '{stem.upper()}' coincide con la entidad oficial {full_name} en {user_name}."
+            elif stem == acronym and len(stem) >= 2:
+                matched = True
+                confidence = 0.96
+                match_reason = f"El acrónimo '{stem.upper()}' corresponde a {full_name} en {user_name}."
+            elif stem in aliases:
+                matched = True
+                confidence = 0.95
+                match_reason = f"El término coincide con el identificador conocido de {full_name}."
+            # 2. Substring containment
+            elif len(stem) >= 3 and (stem in ld_stem or ld_stem in stem):
+                matched = True
+                confidence = 0.90
+                match_reason = f"El término '{stem}' coincide con parte del dominio oficial de {full_name} ({local_domain})."
+            # 3. Levenshtein / Jaro Typo similarity
+            elif len(stem) >= 4 and len(ld_stem) >= 4:
+                dist = _levenshtein_distance(stem, ld_stem)
+                jaro = _jaro_similarity(stem, ld_stem)
+                if dist <= 2 or jaro >= 0.84:
+                    matched = True
+                    confidence = 0.85
+                    match_reason = f"Posible variación o error tipográfico respecto a {full_name} ({local_domain})."
+                    
+            if matched:
+                suggestions.append({
+                    "brand_name": full_name,
+                    "suggested_domain": local_domain,
+                    "url": f"https://{local_domain}",
+                    "category": category,
+                    "reason": match_reason,
+                    "confidence": confidence
+                })
+                
+        # Deduplicate by suggested_domain, keeping highest confidence
+        unique_map = {}
+        for s in suggestions:
+            dom = s["suggested_domain"]
+            if dom not in unique_map or s["confidence"] > unique_map[dom]["confidence"]:
+                unique_map[dom] = s
+                
+        sorted_suggestions = sorted(unique_map.values(), key=lambda x: x["confidence"], reverse=True)
+        return sorted_suggestions[:3]
+
 
 # Singleton instance
 detection_rules = DetectionRules()
@@ -1018,14 +1134,25 @@ def analyze_url_rules(url: str, user_country: str = "") -> Dict[str, any]:
     Public API for rule-based analysis.
     
     Returns:
-        Dict with aggregate_score, triggered_rules, and detailed_results
+        Dict with aggregate_score, triggered_rules, detailed_results,
+        geo_context, and local_suggestions
     """
+    try:
+        hostname = (urlsplit(url).hostname or "").lower()
+    except Exception:
+        hostname = ""
+        
     results = detection_rules.analyze(url, user_country=user_country)
     score, summary = detection_rules.get_aggregate_score(results)
+    
+    geo_context = detection_rules.get_geo_context(hostname, user_country=user_country)
+    local_suggestions = detection_rules.find_local_brand_suggestions(hostname, user_country=user_country)
     
     return {
         "aggregate_score": round(score, 4),
         "summary": summary,
+        "geo_context": geo_context,
+        "local_suggestions": local_suggestions,
         "triggered_rules": [
             {
                 "rule": r.rule_name,
@@ -1046,6 +1173,16 @@ def analyze_url_rules(url: str, user_country: str = "") -> Dict[str, any]:
             for r in results
         ]
     }
+
+
+def get_geo_context(hostname: str, user_country: str = "") -> Dict[str, any]:
+    """Public helper for domain/server geo-origin inspection."""
+    return detection_rules.get_geo_context(hostname, user_country=user_country)
+
+
+def find_local_brand_suggestions(hostname: str, user_country: str = "") -> List[Dict[str, any]]:
+    """Public helper to find local brand suggestions for a given hostname and user country."""
+    return detection_rules.find_local_brand_suggestions(hostname, user_country=user_country)
 
 
 if __name__ == "__main__":

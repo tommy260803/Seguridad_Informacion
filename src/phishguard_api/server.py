@@ -169,11 +169,15 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
         raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}")
     
     brand_mismatch = result.get("brand_mismatch")
+    local_suggestions = result.get("local_suggestions", [])
+    geo_context = result.get("geo_context", {})
     
-    if brand_mismatch and result["decision"] == "legitimate":
+    if (brand_mismatch or (local_suggestions and geo_context and geo_context.get("is_foreign"))) and result["decision"] == "legitimate":
         result["decision"] = "warning"
-        result["brand_mismatch"]["relevance"] = "medium"
+        if brand_mismatch:
+            result["brand_mismatch"]["relevance"] = "medium"
     
+    job_id_str = None
     # Save to database for tracking
     try:
         from phishguard_api.models import Job, JobStatus, Analysis
@@ -181,6 +185,7 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
         job = Job(url=url, status=JobStatus.COMPLETED)
         db.add(job)
         await db.flush()
+        job_id_str = str(job.id)
         
         analysis = Analysis(
             id=job.id,
@@ -189,9 +194,12 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
             confidence=1.0 - abs(result["probability"] - 0.5) * 2,
             uncertainty=0.0,
             brand_name=result.get("brand_analysis", {}).get("closest_brand") if result.get("brand_analysis") else None,
-            modalities_consulted=["url", "brand", "rules"],
+            modalities_consulted=["url", "brand", "rules", "tranco", "homoglyphs"],
             evidence_summary=[{
-                "source": "M0+Brand+Rules",
+                "source": "M0+Tranco+Brand+Rules",
+                "reputation": result.get("reputation"),
+                "homoglyphs": result.get("homoglyphs"),
+                "risk_breakdown": result.get("risk_breakdown"),
                 "details": result.get("brand_analysis")
             }]
         )
@@ -203,11 +211,17 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
     
     return {
         "url": url,
+        "job_id": job_id_str,
         "probability": result["probability"],
         "decision": result["decision"],
         "model": result["model"],
-        "brand_analysis": result["brand_analysis"],
+        "reputation": result.get("reputation"),
+        "homoglyphs": result.get("homoglyphs"),
+        "risk_breakdown": result.get("risk_breakdown"),
+        "brand_analysis": result.get("brand_analysis"),
         "brand_mismatch": result.get("brand_mismatch"),
+        "geo_context": result.get("geo_context"),
+        "local_suggestions": result.get("local_suggestions", []),
         "rules_analysis": result.get("rules_analysis"),
     }
 
