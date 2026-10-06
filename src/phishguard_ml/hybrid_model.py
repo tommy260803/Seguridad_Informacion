@@ -52,11 +52,16 @@ class HybridM0Model:
         
     def _load_m0(self) -> Dict[str, Any]:
         """Load the existing M0 model."""
-        m0_path = Path("artifacts/url-baseline-0.2.0/conventional/model.joblib")
-        if m0_path.exists():
-            print(f"Loading M0 model from {m0_path}")
-            return joblib.load(m0_path)
-        print(f"WARNING: M0 model not found at {m0_path}")
+        candidate_paths = [
+            Path("artifacts/url-baseline-0.2.0/model.joblib"),
+            Path("artifacts/url-baseline-0.2.0/conventional/model.joblib"),
+            Path("/app/artifacts/url-baseline-0.2.0/model.joblib"),
+        ]
+        for m0_path in candidate_paths:
+            if m0_path.exists():
+                print(f"Loading M0 model from {m0_path}")
+                return joblib.load(m0_path)
+        print(f"WARNING: M0 model not found in candidate paths: {candidate_paths}")
         return None
     
     def _load_psl(self) -> PublicSuffixList:
@@ -152,21 +157,51 @@ class HybridM0Model:
         
         decision = "phishing" if final_prob >= 0.5 else "legitimate"
         
-        # EXACT BRAND MATCH OVERRIDE: if hostname (without TLD) is a known brand name,
-        # force decision to legitimate. Prevents M0 from flagging real brand domains.
+        # BRAND MATCH AND SUBDOMAIN IMPERSONATION CHECK
         try:
             from urllib.parse import urlsplit
             parsed_url = urlsplit(url)
             host = (parsed_url.hostname or "").lower()
             if host.startswith("www."):
                 host = host[4:]
-            domain_parts = host.split(".")
-            domain_name = domain_parts[0] if domain_parts else ""
-            if domain_name in _KNOWN_BRAND_NAMES:
+            
+            if self.psl:
+                reg_domain = self.psl.registrable_domain(host) or host
+            else:
+                parts = host.split(".")
+                reg_domain = ".".join(parts[-2:]) if len(parts) >= 2 else host
+            
+            # The organization label of the registered domain (SLD)
+            reg_parts = reg_domain.split(".")
+            reg_name = reg_parts[0] if reg_parts else ""
+            
+            # Check subdomains (labels preceding the registered domain)
+            subdomain_prefix = ""
+            if host != reg_domain and host.endswith("." + reg_domain):
+                subdomain_prefix = host[:-len("." + reg_domain)]
+            subdomain_parts = [p for p in subdomain_prefix.split(".") if p] if subdomain_prefix else []
+            
+            # Check if any known brand name appears in subdomains
+            subdomain_brand = next((p for p in subdomain_parts if p in _KNOWN_BRAND_NAMES), None)
+            
+            # 1. SUBDOMAIN BRAND IMPERSONATION ATTACK:
+            # A brand is in subdomains (e.g. paypal.attacker.com, apple.id-verify.net),
+            # but the registered domain is NOT that brand.
+            if subdomain_brand and reg_name not in _KNOWN_BRAND_NAMES:
+                decision = "phishing"
+                final_prob = max(final_prob, 0.88)
+                if not brand_features.get("is_brand_impersonation"):
+                    brand_features["is_brand_impersonation"] = 1
+                    brand_features["closest_brand"] = subdomain_brand
+                    brand_features["typosquatting_score"] = 0.92
+            
+            # 2. EXACT LEGITIMATE BRAND DOMAIN MATCH:
+            # Genuine brand domain (e.g. facebook.com, paypal.com, bbva.pe) without conflicting brand spoofing
+            elif reg_name in _KNOWN_BRAND_NAMES and not subdomain_brand:
                 decision = "legitimate"
-                final_prob = min(final_prob, 0.45)
-        except Exception:
-            pass
+                final_prob = min(final_prob, 0.40)
+        except Exception as brand_match_err:
+            print(f"Error in brand domain validation: {brand_match_err}", flush=True)
         
         return {
             "probability": round(final_prob, 6),

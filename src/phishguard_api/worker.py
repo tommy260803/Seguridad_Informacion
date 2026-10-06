@@ -8,6 +8,7 @@ from phishguard_api.database import async_session_maker
 from phishguard_api.cache import decision_cache
 from phishguard_api.bloom_filter import domain_filter
 from phishguard_api.metrics import metrics
+from phishguard_api.budget_tracker import ExecutionBudgetTracker
 
 from dataclasses import replace
 from phishguard_orchestrator.engine import AdaptivePolicy, decide_next
@@ -136,6 +137,7 @@ async def process_job(session: AsyncSession, job: Job):
         decision = "uncertain"
         confidence = 0.0
         uncertainty = 1.0
+        tracker = ExecutionBudgetTracker(initial_budget_units=policy.budget)
         
         print(f"Worker {job.id}: Entrando al orquestador adaptativo", flush=True)
         # Bucle del orquestador adaptativo
@@ -172,6 +174,7 @@ async def process_job(session: AsyncSession, job: Job):
                 break
             else:
                 # Modality solicitada (infrastructure, content, visual)
+                tracker.start_modality(action)
                 session.add(Event(
                     job_id=job.id, step=action, event_type="acquire",
                     details={"msg": f"Solicitando sandbox para {action}"}
@@ -252,14 +255,52 @@ async def process_job(session: AsyncSession, job: Job):
                 elif action == "visual":
                     probability = predict_m3(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], accumulated_features["visual"], probability)
                 
+                # Descontar costo del presupuesto acumulado (MDP constraint) y registrar contabilidad
+                cost_spent = policy.costs.get(action, 1.0)
+                spent += cost_spent
+                
+                llm_det = sandbox_task.result_json.get("llm_details") if sandbox_task.result_json else {}
+                prompt_tok = llm_det.get("prompt_tokens", 0) if isinstance(llm_det, dict) else 0
+                comp_tok = llm_det.get("completion_tokens", 0) if isinstance(llm_det, dict) else 0
+                m_name = llm_det.get("model", "") if isinstance(llm_det, dict) else ""
+                
+                rec = tracker.finish_modality(
+                    modality=action,
+                    cost_units=cost_spent,
+                    prompt_tokens=prompt_tok,
+                    completion_tokens=comp_tok,
+                    model_name=m_name
+                )
+                
+                session.add(Event(
+                    job_id=job.id, step=action, event_type="acquired",
+                    details={
+                        "msg": f"Modalidad {action} completada",
+                        "cost": cost_spent,
+                        "spent_total": spent,
+                        "budget_remaining": max(0.0, policy.budget - spent),
+                        "latency_ms": rec.latency_ms,
+                        "estimated_usd": rec.estimated_usd
+                    }
+                ))
+                
                 consulted.append(action)
                 step += 1
                 
-        print(f"Worker {job.id}: Terminado bucle adaptativo con decision {decision}", flush=True)
+        print(f"Worker {job.id}: Terminado bucle adaptativo con decision {decision} (Presupuesto gastado={spent}/{policy.budget})", flush=True)
         # --- GUARDAR RESULTADOS E INSTRUMENTACIÓN ---
+        budget_summary = tracker.summary()
         evidence = [
             {"source": "M0", "feature": "probability", "value": probability},
-            {"source": "orchestrator", "confidence": confidence, "uncertainty": uncertainty, "exit_stage": consulted[-1] if consulted else "url"}
+            {
+                "source": "orchestrator", 
+                "confidence": confidence, 
+                "uncertainty": uncertainty,
+                "spent_budget": spent,
+                "total_budget": policy.budget,
+                "exit_stage": consulted[-1] if consulted else "url"
+            },
+            {"source": "budget_accounting", "summary": budget_summary}
         ]
         if "content" in accumulated_features and "llm_details" in accumulated_features["content"]:
             evidence.append({"source": "LLM", "details": accumulated_features["content"]["llm_details"]})

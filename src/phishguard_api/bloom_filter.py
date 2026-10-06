@@ -1,5 +1,5 @@
 """
-High-Speed In-Memory Bloom Filter for PhishGuard.
+High-Speed In-Memory Bloom Filter for PhishPe.
 Provides O(1) membership testing for high-reputation trusted domains and known threat feeds,
 enabling sub-millisecond bypass or pre-filtering before invoking ML models.
 """

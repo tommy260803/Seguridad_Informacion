@@ -9,7 +9,7 @@ const GLOBAL_SAFE_DOMAINS = [
 const analysisCache = new Map();
 
 async function checkUrl(url, endpoint, userCountry) {
-  console.log("[PhishGuard] Checking URL:", url);
+  console.log("[PhishPe] Checking URL:", url);
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -17,7 +17,7 @@ async function checkUrl(url, endpoint, userCountry) {
   });
   if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
   const data = await response.json();
-  console.log("[PhishGuard] Result:", data);
+  console.log("[PhishPe] Result:", data);
   return data;
 }
 
@@ -55,7 +55,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   try {
     const urlObj = new URL(url);
     if (GLOBAL_SAFE_DOMAINS.some(domain => urlObj.hostname.endsWith(domain))) {
-      console.log("[PhishGuard] Safe domain, skipping:", urlObj.hostname);
+      console.log("[PhishPe] Safe domain, skipping:", urlObj.hostname);
       return;
     }
   } catch(e) { return; }
@@ -77,11 +77,11 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         effectiveCountry = (geoData.country_code || '').toUpperCase();
         if (effectiveCountry) {
           chrome.storage.local.set({ user_country: effectiveCountry });
-          console.log("[PhishGuard] Auto-detected country:", effectiveCountry);
+          console.log("[PhishPe] Auto-detected country:", effectiveCountry);
         }
       }
     } catch (e) {
-      console.warn("[PhishGuard] Auto-detect failed:", e.message);
+      console.warn("[PhishPe] Auto-detect failed:", e.message);
     }
   }
 
@@ -101,7 +101,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
       return false;
     });
     if (isAllowed) {
-      console.log("[PhishGuard] Allowed URL, skipping:", origin);
+      console.log("[PhishPe] Allowed URL, skipping:", origin);
       return;
     }
     const validEntries = allowed_urls.filter(entry => {
@@ -115,7 +115,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 
   if (safe_url_redirecting && safe_url_redirecting[url]) {
     if (now - safe_url_redirecting[url] < 5000) {
-      console.log("[PhishGuard] Recently checked, skipping:", url);
+      console.log("[PhishPe] Recently checked, skipping:", url);
       return;
     }
   }
@@ -135,7 +135,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 
   // Check URL in background — no longer blocks the redirect
   try {
-    console.log("[PhishGuard] Starting check for:", url);
+    console.log("[PhishPe] Starting check for:", url);
     const result = await checkUrl(url, endpoint, effectiveCountry);
     
     analysisCache.set(url, result);
@@ -156,11 +156,11 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     });
 
     if (decision === 'phishing') {
-      console.log("[PhishGuard] PHISHING DETECTED");
+      console.log("[PhishPe] PHISHING DETECTED");
     } else if (decision === 'warning') {
-      console.log("[PhishGuard] WARNING: brand-country mismatch");
+      console.log("[PhishPe] WARNING: brand-country mismatch");
     } else {
-      console.log("[PhishGuard] URL is legitimate, allowing:", url);
+      console.log("[PhishPe] URL is legitimate, allowing:", url);
       // Add to allowed_urls to prevent re-check loop
       chrome.storage.local.get({ allowed_urls: [] }).then(({ allowed_urls }) => {
         const entry = { origin: new URL(url).origin, timestamp: Date.now() };
@@ -171,7 +171,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
       });
     }
   } catch (error) {
-    console.error("[PhishGuard] Check error:", error);
+    console.error("[PhishPe] Check error:", error);
     // Store error so warning.js shows something
     chrome.storage.local.set({
       [`result_${url}`]: { probability: 0.5, decision: 'phishing', ready: true }

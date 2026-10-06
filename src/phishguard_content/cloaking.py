@@ -1,5 +1,5 @@
 """
-Anti-Cloaking and Sandbox Evasion Detection Engine for PhishGuard.
+Anti-Cloaking and Sandbox Evasion Detection Engine for PhishPe.
 Detects modern phishing evasion tactics (navigator.webdriver checks, fake CAPTCHAs,
 delayed DOM payload injection, and crawler fingerprinting).
 """

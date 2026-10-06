@@ -1,5 +1,5 @@
 """
-Automated Verification Script for the 5 Strategic Improvements in PhishGuard
+Automated Verification Script for the 5 Strategic Improvements in PhishPe
 """
 
 import asyncio
@@ -105,7 +105,7 @@ async def test_fastapi_endpoints():
 
 async def main_async():
     print("=" * 65)
-    print("VERIFICACIÓN DE LAS 5 MEJORAS IMPLEMENTADAS EN PHISHGUARD")
+    print("VERIFICACIÓN DE LAS 5 MEJORAS IMPLEMENTADAS EN PHISHPE")
     print("=" * 65)
     test_bloom_filter()
     await test_commercial_baseline()

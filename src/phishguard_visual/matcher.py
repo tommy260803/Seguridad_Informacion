@@ -1,5 +1,5 @@
 """
-Visual Brand Logo and Layout Matcher for PhishGuard Stage M3.
+Visual Brand Logo and Layout Matcher for PhishPe Stage M3.
 Detects spoofed financial and technology brands using perceptual feature alignment.
 """
 

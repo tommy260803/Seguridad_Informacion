@@ -1,5 +1,5 @@
 """
-OASIS STIX 2.1 Threat Intelligence Exporter for PhishGuard.
+OASIS STIX 2.1 Threat Intelligence Exporter for PhishPe.
 Converts phishing detections and evidence into standardized STIX 2.1 bundles for SIEM/SOAR/MISP ingestion.
 """
 
@@ -19,7 +19,7 @@ def export_to_stix21(
     modalities_consulted: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Transforms a PhishGuard analysis result into an OASIS STIX 2.1 Bundle JSON.
+    Transforms a PhishPe analysis result into an OASIS STIX 2.1 Bundle JSON.
     """
     now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     bundle_id = f"bundle--{uuid.uuid4()}"
@@ -38,7 +38,7 @@ def export_to_stix21(
         "created": now_iso,
         "modified": now_iso,
         "name": f"Malicious Phishing URL: {url}",
-        "description": f"PhishGuard automated detection. Probability: {probability:.2%}, Decision: {decision}",
+        "description": f"PhishPe automated detection. Probability: {probability:.2%}, Decision: {decision}",
         "indicator_types": ["malicious-activity"],
         "pattern": f"[url:value = '{url}']",
         "pattern_type": "stix",

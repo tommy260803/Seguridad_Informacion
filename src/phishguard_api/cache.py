@@ -1,5 +1,5 @@
 """
-Decision Cache for PhishGuard API.
+Decision Cache for PhishPe API.
 Provides high-performance in-memory LRU caching with TTL expiration to eliminate
 redundant inferences for frequently analyzed URLs and trusted benign domains.
 """

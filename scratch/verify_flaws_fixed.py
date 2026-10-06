@@ -1,5 +1,5 @@
 """
-Automated Verification Script for the 5 Resolved Flaws in PhishGuard
+Automated Verification Script for the 5 Resolved Flaws in PhishPe
 """
 
 import sys
@@ -60,7 +60,7 @@ def test_worker_imports():
 
 def main():
     print("=" * 60)
-    print("VERIFICACIÓN DE LOS 5 FALLOS CORREGIDOS EN PHISHGUARD")
+    print("VERIFICACIÓN DE LOS 5 FALLOS CORREGIDOS EN PHISHPE")
     print("=" * 60)
     test_cache()
     test_resolver_timeout()

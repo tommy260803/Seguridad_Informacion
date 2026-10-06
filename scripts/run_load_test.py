@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PhishGuard Load and Concurrency Benchmarking Suite
+PhishPe Load and Concurrency Benchmarking Suite
 Simulates parallel API requests to measure throughput, latency percentiles (P50, P95, P99), and success rates.
 """
 
@@ -65,7 +65,7 @@ async def simulate_single_request(request_id: int, sem: asyncio.Semaphore) -> di
 
 async def run_load_test(concurrency: int, total_requests: int):
     print(f"=" * 60)
-    print(f"PhishGuard Load Test Benchmark")
+    print(f"PhishPe Load Test Benchmark")
     print(f"Concurrency: {concurrency} workers | Total Requests: {total_requests}")
     print(f"=" * 60)
     
@@ -100,7 +100,7 @@ async def run_load_test(concurrency: int, total_requests: int):
     print(f"=" * 60)
 
 def main():
-    parser = argparse.ArgumentParser(description="PhishGuard Load Testing Script")
+    parser = argparse.ArgumentParser(description="PhishPe Load Testing Script")
     parser.add_argument("--concurrency", type=int, default=20, help="Number of concurrent request workers")
     parser.add_argument("--total-requests", type=int, default=100, help="Total number of requests to issue")
     args = parser.parse_args()

@@ -71,6 +71,21 @@ class InfrastructureAnalyzer:
             "total_dns_ms": float(sum(hop.dns_elapsed_ms for hop in hops)),
             "total_request_ms": float(sum(hop.request_elapsed_ms for hop in hops)),
         }
+
+        # Análisis de Fast-Flux y Dispersión de Red (/24)
+        ipv4_addrs = [addr for addr in initial_addresses if addr.version == 4]
+        distinct_slash24 = len({str(ipaddress.ip_network(f"{addr}/24", strict=False)) for addr in ipv4_addrs})
+        dispersion_ratio = distinct_slash24 / len(ipv4_addrs) if ipv4_addrs else 0.0
+
+        if len(ipv4_addrs) >= 3 and distinct_slash24 >= 3:
+            fast_flux_prob = min(1.0, 0.50 + 0.15 * (distinct_slash24 - 2))
+        else:
+            fast_flux_prob = 0.0
+
+        features["dns_distinct_slash24_count"] = float(distinct_slash24)
+        features["dns_subnet_dispersion_ratio"] = float(dispersion_ratio)
+        features["fast_flux_probability"] = float(fast_flux_prob)
+
         if certificates:
             features.update(
                 {

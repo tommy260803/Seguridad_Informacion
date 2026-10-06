@@ -1,5 +1,5 @@
 """
-SLA-Aware Inspection Profiles for PhishGuard Adaptive Orchestrator.
+SLA-Aware Inspection Profiles for PhishPe Adaptive Orchestrator.
 Allows client applications to balance latency constraints against inspection depth.
 """
 

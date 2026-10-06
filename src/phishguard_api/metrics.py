@@ -1,5 +1,5 @@
 """
-Prometheus Observability Metrics Exporter for PhishGuard.
+Prometheus Observability Metrics Exporter for PhishPe.
 Tracks throughput, latencies by stage, cache hit ratios, and worker states
 in standard Prometheus/OpenMetrics text format without requiring heavy external dependencies.
 """

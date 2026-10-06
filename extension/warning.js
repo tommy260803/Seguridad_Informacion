@@ -19,7 +19,7 @@ if (isPending && targetUrl) {
     document.querySelector('.warning-icon-wrap').style.background = '#3b82f6';
     document.querySelector('.warning-icon-wrap').innerHTML = '<div class="spinner"></div>';
     document.getElementById('main-title').textContent = 'Analizando sitio...';
-    document.getElementById('main-desc').textContent = 'PhishGuard está verificando la seguridad de este dominio. Esto puede tomar unos segundos.';
+    document.getElementById('main-desc').textContent = 'PhishPe está verificando la seguridad de este dominio. Esto puede tomar unos segundos.';
     document.querySelector('.url-status-badge').textContent = '⏳ Analizando';
     document.querySelector('.url-status-badge').style.background = '#dbeafe';
     document.querySelector('.url-status-badge').style.color = '#1d4ed8';
@@ -65,7 +65,7 @@ if (isPending && targetUrl) {
           window.location.search = newParams.toString();
         }
       } catch (e) {
-        console.error('[PhishGuard] Poll error:', e);
+        console.error('[PhishPe] Poll error:', e);
       }
     }, 500);
   });

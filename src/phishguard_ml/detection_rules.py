@@ -151,6 +151,7 @@ class DetectionRules:
         search_paths = [
             Path("configs") / config_name,
             Path(__file__).parent.parent.parent / "configs" / config_name,
+            Path.home() / ".phishpe" / config_name,
             Path.home() / ".phishguard" / config_name,
         ]
         
@@ -523,7 +524,7 @@ class DetectionRules:
             
             import urllib.request
             api_url = f"http://ip-api.com/json/{ip_address}?fields=status,country,countryCode,regionName,isp"
-            req = urllib.request.Request(api_url, headers={"User-Agent": "PhishGuard/1.0"})
+            req = urllib.request.Request(api_url, headers={"User-Agent": "PhishPe/1.0"})
             
             with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
                 data = json.loads(response.read().decode())

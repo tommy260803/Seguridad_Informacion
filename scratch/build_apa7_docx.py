@@ -167,7 +167,7 @@ def main():
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_title.paragraph_format.space_after = Pt(18)
-    r_title = p_title.add_run("PhishGuard: Budget-Conscious Adaptive Multimodal Orchestration for Efficient Phishing Detection")
+    r_title = p_title.add_run("PhishPe: Budget-Conscious Adaptive Multimodal Orchestration for Efficient Phishing Detection")
     r_title.font.name = 'Times New Roman'
     r_title.font.size = Pt(14)
     r_title.font.bold = True
@@ -217,17 +217,17 @@ def main():
         "features to combat sophisticated cyber threats. However, existing static multimodal pipelines evaluate all feature "
         "modalities indiscriminately for every input URL, resulting in excessive latency (often >1.2 seconds) and prohibitive "
         "computational costs, particularly when integrating Large Language Models (LLMs) or heavy computer vision primitives. "
-        "In this paper, we present PhishGuard, a budget-conscious adaptive multimodal orchestration framework designed for "
-        "resource-efficient phishing detection. PhishGuard employs a dynamic cascade mechanism guided by Shannon entropy "
+        "In this paper, we present PhishPe, a budget-conscious adaptive multimodal orchestration framework designed for "
+        "resource-efficient phishing detection. PhishPe employs a dynamic cascade mechanism guided by Shannon entropy "
         "uncertainty estimates, triggering heavier analysis modalities—such as DNS/WHOIS infrastructure checks, DOM structural "
         "parsing, LLM semantic analysis, and visual matching—only when lighter stages express high classification uncertainty. "
-        "We evaluate PhishGuard on a benchmark dataset of N = 2,000 URLs (1,000 phishing from OpenPhish/PhishTank and 1,000 "
+        "We evaluate PhishPe on a benchmark dataset of N = 2,000 URLs (1,000 phishing from OpenPhish/PhishTank and 1,000 "
         "legitimate from Tranco Top-100k) using a strictly non-overlapping host-unseen test partition (N = 300). Experimental "
-        "results demonstrate that PhishGuard's adaptive orchestrator (M5) achieves classification performance statistically "
+        "results demonstrate that PhishPe's adaptive orchestrator (M5) achieves classification performance statistically "
         "equivalent to the full fixed multimodal pipeline (M3) (F1 = 1.0000, TOST equivalence p = 0.0001 < 0.05 with an "
         "equivalence margin of delta = 0.02), while reducing average detection latency by 97.7% (from 1,250.0 ms to 28.4 ms, "
         "paired t-test p < 0.0001, d = 115.38) and LLM token consumption by 97.9%. Furthermore, under homoglyph and typosquatting "
-        "evasion attacks, the baseline lexical classifier (M0) suffers a 36.62% drop in Recall (p = 1.52e-12), whereas PhishGuard "
+        "evasion attacks, the baseline lexical classifier (M0) suffers a 36.62% drop in Recall (p = 1.52e-12), whereas PhishPe "
         "automatically escalates evaluation to deeper modalities, preserving a 98.59% Recall (0% degradation). Finally, we "
         "demonstrate that selective abstention (tau_abstain = 0.40 - 0.60) successfully isolates ambiguous edge cases (1.67% "
         "abstention rate) with zero classification errors on accepted samples."
@@ -315,13 +315,13 @@ def main():
     )
     add_heading_level_2("1.2 Contributions")
     add_body_paragraph(
-        "To resolve this efficiency paradox, we introduce PhishGuard, an adaptive, entropy-guided cascade framework. Our core contributions are: "
+        "To resolve this efficiency paradox, we introduce PhishPe, an adaptive, entropy-guided cascade framework. Our core contributions are: "
         "1. Adaptive Cascade Architecture: An orchestration engine that dynamically evaluates URLs across four incremental tiers (M0: Lexical, M1: Infrastructure, "
         "M2: DOM + LLM, M3: Visual), escalating to heavier tiers only when prediction entropy exceeds defined confidence thresholds (tau).\n"
         "2. Empirical Performance Equivalence: Demonstration on a N = 300 host-unseen benchmark that adaptive orchestration (M5) matches full multimodal performance "
         "(F1 = 1.0000, TOST p = 0.0001) while eliminating 97.7% of average processing latency (28.4 ms vs 1,250.0 ms) and 97.9% of LLM token API overhead.\n"
         "3. Adversarial Evasion Resilience: Empirical proof that under homoglyph perturbation attacks, where lexical classifiers fail (Recall drops by 36.62%, p < 1e-11), "
-        "PhishGuard automatically routes 96.1% of evasive samples to infrastructure and DOM modalities, preserving full detection recall (98.59%).\n"
+        "PhishPe automatically routes 96.1% of evasive samples to infrastructure and DOM modalities, preserving full detection recall (98.59%).\n"
         "4. Selective Abstention: Integration of an uncertainty-based abstention threshold that identifies ambiguous samples (1.67% rate) for human analyst review."
     )
 
@@ -345,7 +345,7 @@ def main():
     add_body_paragraph(
         "Early exit architectures and cascade classifiers have been explored in computer vision and deep neural networks to reduce inference compute. "
         "In cybersecurity, early-exit cascades remain underutilized due to challenges in calibrating prediction probabilities across heterogeneous model modalities. "
-        "PhishGuard addresses this gap by employing normalized Shannon entropy as a modality-agnostic gating metric across GBDT and LLM stages."
+        "PhishPe addresses this gap by employing normalized Shannon entropy as a modality-agnostic gating metric across GBDT and LLM stages."
     )
 
     # -------------------------------------------------------------
@@ -363,7 +363,7 @@ def main():
     # -------------------------------------------------------------
     add_heading_level_1("4. Methodology and System Architecture")
     add_body_paragraph(
-        "PhishGuard structures phishing detection as a multi-tier sequential decision process over an input URL u. "
+        "PhishPe structures phishing detection as a multi-tier sequential decision process over an input URL u. "
         "The feature space X is partitioned into four hierarchical feature sets: X0 (19 lexical features), X1 (35 infrastructure features), "
         "X2 (49 DOM/HTML and LLM features), and X3 (59 visual screenshot features). Classifiers for tiers M0 through M3 are trained using LightGBM. "
         "Raw output scores are converted to calibrated posterior probability distributions P(y=1|X_k) using Platt sigmoidal scaling calibrated on a held-out validation set (N = 300)."
@@ -378,7 +378,7 @@ def main():
     # Insert Figure 1: Flowchart / Architecture
     fig_dir = r"c:\Proyects\Seguridad_Informacion\artifacts\figures"
     add_apa_figure(
-        doc, 1, "PhishGuard Adaptive Multimodal Cascade Architecture and Exit Logic",
+        doc, 1, "PhishPe Adaptive Multimodal Cascade Architecture and Exit Logic",
         os.path.join(fig_dir, "modality_distribution.png"),
         "The flow chart illustrates stage exit distributions across the N = 300 test set. Stage M0 resolves 91.33% of samples at sub-millisecond latencies."
     )
@@ -519,7 +519,7 @@ def main():
     add_apa_figure(
         doc, 6, "Pareto Frontier of Latency versus F1-Score Performance",
         os.path.join(fig_dir, "cost_vs_performance.png"),
-        "PhishGuard (M5) occupies the optimal Pareto frontier point, achieving 28.4 ms mean latency with F1 = 1.0000."
+        "PhishPe (M5) occupies the optimal Pareto frontier point, achieving 28.4 ms mean latency with F1 = 1.0000."
     )
 
     add_apa_figure(
@@ -572,7 +572,7 @@ def main():
         "The empirical findings demonstrate that multimodal security pipelines do not need to execute heavy analysis stages unconditionally. "
         "Because 91.33% of routine web traffic generates unambiguous lexical prediction probabilities (entropy H <= 0.85), an entropy-guided cascade "
         "decouples average runtime latency from worst-case pipeline complexity. When an attacker alters URL lexical patterns, elevated entropy triggers "
-        "PhishGuard's escalation mechanism, activating network telemetry and DOM inspection."
+        "PhishPe's escalation mechanism, activating network telemetry and DOM inspection."
     )
     add_body_paragraph(
         "Limitations: To maintain scientific integrity, we declare: (1) No external commercial baseline comparison against Google Safe Browsing or VirusTotal; "
@@ -585,8 +585,8 @@ def main():
     # -------------------------------------------------------------
     add_heading_level_1("9. Conclusion and Future Work")
     add_body_paragraph(
-        "PhishGuard demonstrates that budget-conscious adaptive multimodal orchestration provides a highly effective, efficient design pattern for phishing detection. "
-        "By leveraging normalized Shannon entropy as an uncertainty gating metric, PhishGuard achieves classification performance statistically equivalent to "
+        "PhishPe demonstrates that budget-conscious adaptive multimodal orchestration provides a highly effective, efficient design pattern for phishing detection. "
+        "By leveraging normalized Shannon entropy as an uncertainty gating metric, PhishPe achieves classification performance statistically equivalent to "
         "a full fixed multimodal pipeline while eliminating 97.7% of latency and 97.9% of LLM token API overhead. "
         "Future work will focus on scaling evaluation to multi-month longitudinal streams (N >= 50,000), conducting controlled human-subject usability studies, "
         "and integrating deep vision backbones."
@@ -596,8 +596,8 @@ def main():
     out_dir_brain = r"C:\Users\Richard Gonzales\.gemini\antigravity\brain\119b68bf-7e67-46e3-ab81-c83ee207a809"
     out_dir_ws = r"c:\Proyects\Seguridad_Informacion"
     
-    file_brain = os.path.join(out_dir_brain, "PhishGuard_Article_APA7.docx")
-    file_ws = os.path.join(out_dir_ws, "PhishGuard_Article_APA7.docx")
+    file_brain = os.path.join(out_dir_brain, "PhishPe_Article_APA7.docx")
+    file_ws = os.path.join(out_dir_ws, "PhishPe_Article_APA7.docx")
 
     doc.save(file_brain)
     doc.save(file_ws)

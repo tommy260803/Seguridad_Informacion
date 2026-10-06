@@ -1,4 +1,4 @@
-"""Generate publication-quality figures for PhishGuard evaluation."""
+"""Generate publication-quality figures for PhishPe evaluation."""
 import csv
 import numpy as np
 import matplotlib

@@ -1,5 +1,5 @@
 """
-Dual Homoglyph and Unicode TR39 Confusable Normalizer for PhishGuard.
+Dual Homoglyph and Unicode TR39 Confusable Normalizer for PhishPe.
 Projects visual characters to their Latin visual skeleton to instantly expose homoglyph brand impersonation.
 """
 

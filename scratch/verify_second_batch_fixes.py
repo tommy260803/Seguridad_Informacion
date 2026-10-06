@@ -1,5 +1,5 @@
 """
-Automated Verification Script for the Second Batch of 5 Critical Fixes in PhishGuard
+Automated Verification Script for the Second Batch of 5 Critical Fixes in PhishPe
 """
 
 import sys

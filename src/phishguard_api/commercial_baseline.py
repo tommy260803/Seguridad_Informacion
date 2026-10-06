@@ -17,7 +17,7 @@ class GoogleSafeBrowsingClient:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GSB_API_KEY")
-        self.client_id = "PhishGuard-Research"
+        self.client_id = "PhishPe-Research"
         self.client_version = "1.0.0"
 
     async def lookup(self, url: str, timeout: float = 3.0) -> Dict[str, Any]:

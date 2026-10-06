@@ -1,5 +1,5 @@
 """
-Automated Verification Script for the 5 Differentiating Value Improvements in PhishGuard
+Automated Verification Script for the 5 Differentiating Value Improvements in PhishPe
 """
 
 import sys
@@ -127,7 +127,7 @@ def test_stix_exporter():
 
 def main():
     print("=" * 70)
-    print("VERIFICACIÓN DE LAS 5 MEJORAS DE VALOR DIFERENCIADOR EN PHISHGUARD")
+    print("VERIFICACIÓN DE LAS 5 MEJORAS DE VALOR DIFERENCIADOR EN PHISHPE")
     print("=" * 70)
     test_sla_profiles()
     test_forensic_manifest()

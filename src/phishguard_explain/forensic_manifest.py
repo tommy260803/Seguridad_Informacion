@@ -1,5 +1,5 @@
 """
-Cryptographic Forensic Evidence Manifest Generator for PhishGuard.
+Cryptographic Forensic Evidence Manifest Generator for PhishPe.
 Creates immutable, tamper-evident audit packages with SHA-256 hashes of all artifacts
 for digital forensics, SOC incident response (DFIR), and legal proceedings.
 """
@@ -80,7 +80,7 @@ def generate_forensic_manifest(
             "model_version": model_version
         },
         "chain_of_custody": {
-            "audit_agency": "PhishGuard Digital Forensics",
+            "audit_agency": "PhishPe Digital Forensics",
             "integrity_standard": "NIST SP 800-86 Guide to Integrating Forensic Techniques",
             "tamper_evident": True
         }

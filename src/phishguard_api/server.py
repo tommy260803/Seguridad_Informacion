@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from typing import Any, Optional
 import uuid
+import re
 
 from contextlib import asynccontextmanager
 import asyncio
@@ -19,6 +20,7 @@ from sqlalchemy import select
 from phishguard_api.database import engine, get_db
 from phishguard_api.models import Base, Job, Analysis, Event
 from phishguard_api.worker import worker_loop
+from phishguard_api.rate_limiter import rate_limit_dependency
 
 worker_task = None
 
@@ -45,7 +47,7 @@ async def lifespan(app: FastAPI):
         worker_task.cancel()
 
 app = FastAPI(
-    title="PhishGuard API", 
+    title="PhishPe API", 
     description="Plataforma científica local para análisis de Phishing",
     lifespan=lifespan
 )
@@ -63,30 +65,48 @@ os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
 @app.get("/screenshots/{filename}")
 async def get_screenshot(filename: str, db: AsyncSession = Depends(get_db)):
-    clean_id = filename.replace(".png", "")
-    screenshot_file = Path(SCREENSHOTS_DIR) / f"{clean_id}.png"
+    # Sanitizar contra Path Traversal: solo caracteres alfanuméricos, guiones y guiones bajos
+    if not re.match(r"^[a-zA-Z0-9_\-]+\.png$", filename):
+        raise HTTPException(status_code=400, detail="Formato de nombre de archivo no válido (debe ser <id>.png)")
 
-    # Captures are produced exclusively by sandbox_manager.  The API must not
-    # launch a browser against an untrusted URL on demand.
-    if not screenshot_file.exists():
-        raise HTTPException(status_code=404, detail="Captura aislada no disponible")
+    clean_id = filename.replace(".png", "")
+    screenshots_root = Path(SCREENSHOTS_DIR).resolve()
+    screenshot_file = (screenshots_root / f"{clean_id}.png").resolve()
+
+    # Garantizar que la ruta no escape de SCREENSHOTS_DIR
+    try:
+        screenshot_file.relative_to(screenshots_root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Intento de navegación de ruta no permitido")
+
+    if screenshot_file.exists():
+        return FileResponse(screenshot_file, media_type="image/png")
     
-    if not screenshot_file.exists():
-        res = await db.execute(select(Job).where(Job.id == clean_id))
-        job = res.scalar_one_or_none()
-        if job and job.url:
+    # Intento de rescate bajo demanda para el job si existe
+    res = await db.execute(select(Job).where(Job.id == clean_id))
+    job = res.scalar_one_or_none()
+    if job and job.url:
+        from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
+        try:
+            validate_url_ssrf_safety(job.url)
+        except UnsafeTargetError as ssrf_err:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "ssrf_blocked", "message": f"Acceso bloqueado por política de seguridad: {ssrf_err.detail}"}
+            )
+
+        try:
             from phishguard_api.browser_sandbox import capture_site_screenshot
             ok, path, _ = await capture_site_screenshot(job.url, clean_id)
-            if not ok or not screenshot_file.exists():
-                raise HTTPException(
-                    status_code=502,
-                    detail={"error": "domain_offline", "message": "No se pudo generar la captura porque el sitio no responde o está fuera de línea."}
-                )
+            if ok and screenshot_file.exists():
+                return FileResponse(screenshot_file, media_type="image/png")
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail={"error": "domain_offline", "message": f"No se pudo generar la captura aislada: {exc}"}
+            )
 
-    if not screenshot_file.exists():
-        raise HTTPException(status_code=404, detail="Captura no encontrada")
-        
-    return FileResponse(screenshot_file, media_type="image/png")
+    raise HTTPException(status_code=404, detail={"error": "screenshot_not_found", "message": "Captura aislada no disponible"})
 
 app.mount("/screenshots-static", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots_static")
 
@@ -150,7 +170,7 @@ class CheckRequest(BaseModel):
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
-@app.post("/check")
+@app.post("/check", dependencies=[Depends(rate_limit_dependency)])
 async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Synchronous URL check using Hybrid M0+Brand+Rules model (for Chrome extension)."""
     from phishguard_ml.hybrid_model import predict_hybrid
@@ -160,6 +180,16 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
         raise HTTPException(status_code=400, detail="URL invalida")
     if not url.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="Only HTTP/HTTPS schemes are allowed")
+    
+    # Validación de seguridad SSRF
+    from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
+    try:
+        validate_url_ssrf_safety(url)
+    except UnsafeTargetError as ssrf_err:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "ssrf_blocked", "message": f"Acceso bloqueado por política de seguridad SSRF: {ssrf_err.detail}"}
+        )
     
     user_country = (req.user_country or "").upper()
     
@@ -223,7 +253,7 @@ async def analyze_legacy(req: AnalyzeRequest) -> dict[str, Any]:
     }
 
 # NUEVOS ENDPOINTS CIENTÍFICOS
-@app.post("/analyses", status_code=202)
+@app.post("/analyses", status_code=202, dependencies=[Depends(rate_limit_dependency)])
 async def submit_analysis(req: AnalyzeRequest, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """Crea un trabajo de análisis en la cola persistente (PostgreSQL)"""
     url = req.url.strip()
@@ -232,6 +262,16 @@ async def submit_analysis(req: AnalyzeRequest, db: AsyncSession = Depends(get_db
     if not url.startswith(("http://", "https://")):
         raise HTTPException(status_code=422, detail="Only HTTP/HTTPS schemes are allowed")
         
+    # Validación de seguridad SSRF
+    from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
+    try:
+        validate_url_ssrf_safety(url)
+    except UnsafeTargetError as ssrf_err:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "ssrf_blocked", "message": f"Acceso bloqueado por política de seguridad SSRF: {ssrf_err.detail}"}
+        )
+
     job = Job(url=url)
     db.add(job)
     await db.commit()
@@ -521,6 +561,56 @@ async def get_stix_bundle(job_id: str, db: AsyncSession = Depends(get_db)) -> di
     )
     return bundle
 
+@app.get("/jobs/{job_id}/export/sigma")
+@app.get("/analyses/{job_id}/export/sigma")
+async def export_sigma_rule(job_id: str, db: AsyncSession = Depends(get_db)):
+    """Exporta regla de detección Sigma YAML para integración con SIEM (Splunk, Elastic, QRadar)."""
+    from fastapi.responses import PlainTextResponse
+    from phishguard_threat.rule_generator import ThreatRuleGenerator
+
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+
+    res_analysis = await db.execute(select(Analysis).where(Analysis.id == job_id))
+    analysis = res_analysis.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Análisis no completado")
+
+    sigma_yaml = ThreatRuleGenerator.generate_sigma_rule(
+        job_id=str(job.id),
+        url=job.url,
+        probability=analysis.probability or 0.0,
+        brand_name=analysis.brand_name,
+    )
+    return PlainTextResponse(content=sigma_yaml, media_type="application/x-yaml")
+
+@app.get("/jobs/{job_id}/export/yara-l")
+@app.get("/analyses/{job_id}/export/yara-l")
+async def export_yaral_rule(job_id: str, db: AsyncSession = Depends(get_db)):
+    """Exporta regla de detección YARA-L 2.0 para Google Chronicle SecOps."""
+    from fastapi.responses import PlainTextResponse
+    from phishguard_threat.rule_generator import ThreatRuleGenerator
+
+    result = await db.execute(select(Job).where(Job.id == job_id))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+
+    res_analysis = await db.execute(select(Analysis).where(Analysis.id == job_id))
+    analysis = res_analysis.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Análisis no completado")
+
+    yaral_rule = ThreatRuleGenerator.generate_yaral_rule(
+        job_id=str(job.id),
+        url=job.url,
+        probability=analysis.probability or 0.0,
+        brand_name=analysis.brand_name,
+    )
+    return PlainTextResponse(content=yaral_rule, media_type="text/plain")
+
 def main() -> None:
     import argparse
     import uvicorn
@@ -529,7 +619,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
     
-    print(f"Iniciando PhishGuard FastAPI en http://{args.host}:{args.port}", flush=True)
+    print(f"Iniciando PhishPe FastAPI en http://{args.host}:{args.port}", flush=True)
     uvicorn.run("phishguard_api.server:app", host=args.host, port=args.port, reload=True)
 
 if __name__ == "__main__":

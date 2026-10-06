@@ -1,5 +1,5 @@
 """
-Enhanced LLM Agent for PhishGuard
+Enhanced LLM Agent for PhishPe
 Uses Groq/Gemini for explainability and brand classification.
 """
 import asyncio
