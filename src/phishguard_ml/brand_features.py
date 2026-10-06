@@ -24,10 +24,19 @@ PHISHING_TARGET_BRANDS = {
     "live": ["live", "lve", "liev"],
     "aol": ["aol", "aool"],
     "icloud": ["icloud", "iclod", "iclouud"],
-    "bank": ["banco", "bank", "banc", "bbcp"],
+    "bank": ["banco", "bank"],
     "bbva": ["bbva", "bbva-login", "bbva-secure", "bbva-acceso"],
     "santander": ["santander", "santander-secure", "santander-acceso"],
     "interbank": ["interbank", "interbank-login"],
+    "viabcp": ["viabcp", "bcp-enlinea", "bcpbanca", "viabcp-acceso"],
+    "bancolombia": ["bancolombia", "bancolombiasecure"],
+    "davivienda": ["davivienda"],
+    "scotiabank": ["scotiabank", "scotiabank-login"],
+    "banamex": ["banamex", "citibanamex"],
+    "banorte": ["banorte"],
+    "caixabank": ["caixabank"],
+    "falabella": ["bancofalabella", "falabella-banco"],
+    "bancodechile": ["bancodechile", "bancochile"],
     "crypto": ["binance", "coinbase", "kraken", "localbitcoin"],
     "dhl": ["dhl", "dhll"],
     "fedex": ["fedex", "fedx"],
@@ -198,23 +207,34 @@ def extract_brand_features(hostname: str) -> dict:
             closest_brand = brand_name
             break
     
-    # Criterios clásicos: distancia <= 2 O similitud > 0.8
+    # Criterios clásicos de typosquatting:
+    # Para marcas de 5+ caracteres: distancia <= 1 o (distancia <= 2 y longitud >= 7 y similitud > 0.82)
+    # Para marcas de 3-4 caracteres: distancia DEBE ser 0 o coincidencia fonética muy estricta (> 0.92)
     if not is_impersonation and not exact_match:
-        if min_distance <= 2:
+        brand_len = len(closest_brand)
+        if brand_len >= 5 and min_distance <= 1:
             is_impersonation = 1
-        elif best_similarity > 0.8:
+        elif brand_len >= 7 and min_distance <= 2 and best_similarity > 0.85:
+            is_impersonation = 1
+        elif best_similarity > 0.92 and min_distance <= 1:
             is_impersonation = 1
     
-    # Dominio compuesto: "bbva-login", "facebook-secure", "santander-acceso"
+    # Dominio compuesto legítimo vs malicioso:
+    # e.g., "bbva-login", "facebook-secure", "santander-acceso", "login.bcp"
+    # IMPORTANTE: NO hacer substring ingenuo ("live" en "delivery", "apple" en "scrapple")
     if not is_impersonation and not exact_match:
-        # Check both keys and variant values (e.g., "bbva" is under "bank" variants)
         all_brand_names = set()
         for brand_name, variants in PHISHING_TARGET_BRANDS.items():
             all_brand_names.add(brand_name)
             all_brand_names.update(variants)
+            
         for brand in sorted(all_brand_names, key=len, reverse=True):
-            # Only match compound domains: brand must be a PART of domain, not the whole domain
-            if len(brand) >= 3 and brand in domain and domain != brand:
+            if len(brand) < 3:
+                continue
+            # El nombre de la marca debe estar claramente separado por guiones o prefijos/sufijos
+            pattern = rf"(^|[-_.0-9]){re.escape(brand)}([-_.0-9]|$)"
+            if re.search(pattern, domain) and domain != brand:
+                # Si está compuesto con keywords sospechosas o delimitado por guiones
                 is_impersonation = 1
                 closest_brand = brand
                 break

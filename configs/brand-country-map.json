@@ -15,22 +15,44 @@
       "bcp": {
         "category": "bank",
         "full_name": "Banco de Credito del Peru",
-        "local_domain": "viabcp.com"
+        "local_domain": "viabcp.com",
+        "also_known_as": ["bcp", "banco de credito", "via bcp"]
       },
       "interbank": {
         "category": "bank",
         "full_name": "Interbank",
-        "local_domain": "interbank.com.pe"
+        "local_domain": "interbank.com.pe",
+        "also_known_as": ["interbank", "ibk"]
       },
       "bbva_pe": {
         "category": "bank",
         "full_name": "BBVA Peru",
-        "local_domain": "bbva.pe"
+        "local_domain": "bbva.pe",
+        "also_known_as": ["bbva", "bbva continental"]
       },
       "scotiabank_pe": {
         "category": "bank",
         "full_name": "Scotiabank Peru",
-        "local_domain": "scotiabank.com.pe"
+        "local_domain": "scotiabank.com.pe",
+        "also_known_as": ["scotiabank", "scotia"]
+      },
+      "banco_de_la_nacion": {
+        "category": "bank",
+        "full_name": "Banco de la Nacion",
+        "local_domain": "bn.com.pe",
+        "also_known_as": ["bn", "banco de la nacion"]
+      },
+      "yape": {
+        "category": "payments",
+        "full_name": "Yape",
+        "local_domain": "yape.com.pe",
+        "also_known_as": ["yape"]
+      },
+      "plin": {
+        "category": "payments",
+        "full_name": "Plin",
+        "local_domain": "plin.pe",
+        "also_known_as": ["plin"]
       },
       "mibanco": {
         "category": "bank",
@@ -40,12 +62,14 @@
       "banco_falabella_pe": {
         "category": "bank",
         "full_name": "Banco Falabella Peru",
-        "local_domain": "bancofalabella.com"
+        "local_domain": "bancofalabella.com",
+        "also_known_as": ["falabella", "banco falabella"]
       },
       "banco_ripley_pe": {
         "category": "bank",
         "full_name": "Banco Ripley Peru",
-        "local_domain": "bancoripley.com.pe"
+        "local_domain": "bancoripley.com.pe",
+        "also_known_as": ["ripley", "banco ripley"]
       },
       "gnb_sudameris": {
         "category": "bank",
@@ -90,17 +114,20 @@
       "sunat": {
         "category": "gov_financial",
         "full_name": "SUNAT",
-        "local_domain": "sunat.gob.pe"
+        "local_domain": "sunat.gob.pe",
+        "also_known_as": ["sunat"]
       },
       "sbs": {
         "category": "gov_financial",
         "full_name": "SBS",
-        "local_domain": "sbs.gob.pe"
+        "local_domain": "sbs.gob.pe",
+        "also_known_as": ["sbs"]
       },
       "smv": {
         "category": "gov_financial",
         "full_name": "SMV",
-        "local_domain": "smv.gob.pe"
+        "local_domain": "smv.gob.pe",
+        "also_known_as": ["smv"]
       }
     },
     "MEXICO": {
