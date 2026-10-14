@@ -88,7 +88,7 @@ async def get_screenshot(filename: str, db: AsyncSession = Depends(get_db)):
     if job and job.url:
         from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
         try:
-            validate_url_ssrf_safety(job.url)
+            await validate_url_ssrf_safety(job.url)
         except UnsafeTargetError as ssrf_err:
             raise HTTPException(
                 status_code=403,
@@ -124,7 +124,7 @@ async def get_preview(job_id: str, db: AsyncSession = Depends(get_db)):
         if job and job.url:
             from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
             try:
-                validate_url_ssrf_safety(job.url)
+                await validate_url_ssrf_safety(job.url)
             except UnsafeTargetError as ssrf_err:
                 raise HTTPException(
                     status_code=403,
@@ -184,7 +184,7 @@ async def check_url(req: CheckRequest, db: AsyncSession = Depends(get_db)) -> di
     # Validación de seguridad SSRF
     from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
     try:
-        validate_url_ssrf_safety(url)
+        await validate_url_ssrf_safety(url)
     except UnsafeTargetError as ssrf_err:
         raise HTTPException(
             status_code=403,
@@ -279,7 +279,7 @@ async def submit_analysis(req: AnalyzeRequest, db: AsyncSession = Depends(get_db
     # Validación de seguridad SSRF
     from phishguard_infra.policy import validate_url_ssrf_safety, UnsafeTargetError
     try:
-        validate_url_ssrf_safety(url)
+        await validate_url_ssrf_safety(url)
     except UnsafeTargetError as ssrf_err:
         raise HTTPException(
             status_code=403,

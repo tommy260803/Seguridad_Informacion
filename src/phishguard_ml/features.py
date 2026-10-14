@@ -88,6 +88,8 @@ FEATURE_PROFILES = {
     "full_url": FEATURE_NAMES,
 }
 
+AUTHORITY_FEATURE_NAMES = FEATURE_PROFILES["authority_only"]
+
 
 @dataclass(frozen=True)
 class UrlFeatureContext:
@@ -101,6 +103,19 @@ def _entropy(value: str) -> float:
     counts = Counter(value)
     length = len(value)
     return -sum((count / length) * math.log2(count / length) for count in counts.values())
+
+
+def _strip_www(hostname: str) -> str:
+    """Normalize hostname by stripping the leading 'www.' prefix.
+    
+    This ensures consistent feature extraction across domains with and without
+    the www prefix, preventing the subdomain_count shortcut bias identified
+    in the external validation phase (FPR dropped from 46.70% to 9.69% when
+    applying strip_www() to M0 evaluations).
+    """
+    if hostname.lower().startswith("www."):
+        return hostname[4:]
+    return hostname
 
 
 def _ratio(numerator: int, denominator: int) -> float:
@@ -125,6 +140,8 @@ def _max_run(value: str) -> int:
 def extract_url_features(context: UrlFeatureContext) -> dict[str, float]:
     parsed = urlsplit(context.canonical_url)
     host = (parsed.hostname or "").lower()
+    # Normalize: strip www. prefix to prevent subdomain_count shortcut bias
+    host = _strip_www(host)
     url_lower = context.canonical_url.lower()
     tokens = TOKEN_PATTERN.findall(url_lower)
     suspicious_count = sum(token in SUSPICIOUS_TOKENS for token in tokens)

@@ -12,7 +12,9 @@ def test_visual_analyzer_extracts_bounded_features(tmp_path: Path) -> None:
     assert result.status == "success"
     assert result.features["visual_width"] == 40
     assert 1.9 < result.features["visual_aspect_ratio"] < 2.1
-    assert len(result.evidence) == 9
+    assert len(result.evidence) == 13
+    assert "visual_phash_distance_min" in result.features
+    assert "visual_hsv_similarity_max" in result.features
 
 
 def test_visual_analyzer_blocks_large_files_and_invalid_images(tmp_path: Path) -> None:

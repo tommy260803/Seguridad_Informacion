@@ -28,14 +28,22 @@ function updateTabBadge(tabId, decision, probability) {
 
 async function checkUrl(url, endpoint, userCountry) {
   console.log("[PhishGuard Background] Analizando:", url);
+  const timeoutMs = 8000; // Tiempo coherente con el límite del backend (WHOIS/GeoIP)
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, user_country: userCountry || undefined }),
-    signal: AbortSignal.timeout(6000)
+    signal: AbortSignal.timeout(timeoutMs)
   });
 
-  if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+  if (!response.ok) {
+    // Si la petición fue abortada por timeout, informamos en lugar de fallar en silencio
+    if (response.type === "error" && response.reason instanceof DOMException) {
+      console.warn("[PhishGuard] Timeout excedendido en consulta de análisis:", url);
+      throw new Error(`Timeout de análisis URL (${timeoutMs}ms): el backend no respondió a tiempo. Se recomienda incrementar el presupuesto de tiempo o verificar conectividad del backend.`);
+    }
+    throw new Error(`HTTP Error: ${response.status}`);
+  }
   const data = await response.json();
   console.log("[PhishGuard Background] Resultado:", data);
   return data;

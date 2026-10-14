@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 
-CONTENT_FEATURE_VERSION = "content-features-1.0.0"
+CONTENT_FEATURE_VERSION = "content-features-2.0.0"
 
 CONTENT_FEATURE_NAMES = (
     "content_observation_available",
@@ -31,6 +31,11 @@ CONTENT_FEATURE_NAMES = (
     "html_external_form_action_count",
     "html_login_term_count",
     "html_payment_term_count",
+    "html_credential_exfiltration_count",
+    "html_webhook_exfiltration_count",
+    "html_insecure_credential_form_count",
+    "html_script_credential_form_count",
+    "form_exfiltration_risk_score",
 )
 
 
@@ -57,7 +62,11 @@ def extract_content_features(result: dict[str, Any] | None) -> dict[str, float]:
             raise ContentFeatureError("Successful content result is missing features")
         return features
     for name in CONTENT_FEATURE_NAMES:
-        if not name.startswith("html_") and name not in {"content_truncated", "content_bytes"}:
+        if not name.startswith("html_") and name not in {
+            "content_truncated",
+            "content_bytes",
+            "form_exfiltration_risk_score",
+        }:
             continue
         value = raw.get(name)
         if value is None:
@@ -65,6 +74,22 @@ def extract_content_features(result: dict[str, Any] | None) -> dict[str, float]:
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
             raise ContentFeatureError(f"Content feature {name} is not finite numeric data")
         features[name] = float(value)
+
+    # Backfill credential exfiltration indicators when reading older JSONL captures
+    if status == "success" and "form_exfiltration_risk_score" not in raw:
+        has_sensitive = (
+            features["html_password_input_count"] > 0 or features["html_payment_input_count"] > 0
+        )
+        ext_forms = features["html_external_form_action_count"]
+        total_forms = features["html_form_count"]
+        scripts = features["html_script_count"]
+        if has_sensitive and ext_forms > 0:
+            features["html_credential_exfiltration_count"] = float(ext_forms)
+            features["form_exfiltration_risk_score"] = 0.85
+        elif has_sensitive and total_forms > 0 and ext_forms == 0 and scripts > 5:
+            features["html_script_credential_form_count"] = 1.0
+            features["form_exfiltration_risk_score"] = 0.65
+
     return features
 
 
@@ -75,6 +100,8 @@ def load_content_results(path: str | Path) -> dict[str, dict[str, Any]]:
         raise ContentFeatureError(f"Cannot read content results: {exc}") from exc
     results: dict[str, dict[str, Any]] = {}
     for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
         try:
             row = json.loads(line)
             sample_id = row["sample_id"]
@@ -93,7 +120,10 @@ def load_content_results(path: str | Path) -> dict[str, dict[str, Any]]:
 def content_feature_matrix(sample_ids: list[str], results_path: str | Path | None) -> np.ndarray:
     results = load_content_results(results_path) if results_path else {}
     matrix = np.asarray(
-        [[extract_content_features(results.get(sample_id))[name] for name in CONTENT_FEATURE_NAMES] for sample_id in sample_ids],
+        [
+            [extract_content_features(results.get(sample_id))[name] for name in CONTENT_FEATURE_NAMES]
+            for sample_id in sample_ids
+        ],
         dtype=np.float64,
     )
     if matrix.shape != (len(sample_ids), len(CONTENT_FEATURE_NAMES)) or not np.isfinite(matrix).all():

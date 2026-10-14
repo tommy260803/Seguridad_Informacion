@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import socket
 from urllib.parse import SplitResult, quote, urlsplit, urlunsplit
@@ -55,11 +56,13 @@ def _is_forbidden_address(value: str) -> tuple[bool, str | None]:
     return False, None
 
 
-def validate_url_ssrf_safety(url: str) -> None:
+async def validate_url_ssrf_safety(url: str) -> None:
     """
     Validates that a URL does not point to localhost, private RFC1918 subnets,
     link-local addresses (169.254.x.x cloud metadata), or internal network hosts.
     Raises UnsafeTargetError if destination is forbidden.
+    
+    Uses asyncio.to_thread for DNS resolution to avoid blocking the ASGI event loop.
     """
     try:
         parsed = urlsplit(url)
@@ -75,12 +78,15 @@ def validate_url_ssrf_safety(url: str) -> None:
         raise UnsafeTargetError("blocked_host", f"Host prohibido por política de seguridad: {host}")
 
     try:
-        records = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+        # Run blocking DNS resolution in a thread to avoid blocking the ASGI event loop
+        records = await asyncio.to_thread(socket.getaddrinfo, host, None, type=socket.SOCK_STREAM)
         for record in records:
             ip_str = record[4][0]
             forbidden, reason = _is_forbidden_address(ip_str)
             if forbidden:
                 raise UnsafeTargetError("ssrf_forbidden_ip", f"Dirección IP no pública o reservada ({ip_str}, {reason}).")
+    except asyncio.TimeoutError:
+        raise UnsafeTargetError("dns_timeout", f"Resolución DNS agotada para {host}")
     except socket.gaierror:
         pass
 

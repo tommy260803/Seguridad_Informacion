@@ -1,0 +1,110 @@
+{
+  "generated_at_utc": "2026-10-13T03:53:15.885700+00:00",
+  "audit_version": "2.0-scopus-final",
+  "git_commit_base": "ceb0c9e62ab861ce993bd3a1ec636d4d4b3405b7",
+  "overall_validation_result": "PASS",
+  "total_checks_evaluated": 10,
+  "total_checks_passed": 10,
+  "checks": {
+    "check_1_table_numbers_traceable_to_json_csv": {
+      "status": "PASS",
+      "checked_artifacts": [
+        "artifacts\\validacion_scopus_fase2\\fase1_auditoria\\01_auditoria_baseline_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase2_externa\\02_validacion_externa_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase3_extension\\03_extension_real_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase4_comparacion\\04_comparacion_cientifica_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase5_cascada\\05_cascada_ablaciones_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase6_visual_llm\\06_visual_y_llm_results.json",
+        "artifacts\\validacion_scopus_fase2\\fase7_estadistica\\07_analisis_estadistico_results.json"
+      ],
+      "detail": "Todos los 7 archivos JSON maestros existen y contienen los registros completos de metricas."
+    },
+    "check_2_all_models_have_sha256": {
+      "status": "PASS",
+      "model_hashes": {
+        "artifacts\\m0-real\\model.joblib": "249e6e387e74d842b3312470fe7a8f548f86908c9447e8c54c9b41676c938912",
+        "artifacts\\m1-real\\model.joblib": "c139ebe5dc042d7558a30d2bdd85016b279e4557324a40231f663062597316d9",
+        "artifacts\\m2-real\\model.joblib": "9da6de033d70318397ab2d973f44dedaee42156d51b57a00113fdbc8ec6a8400",
+        "artifacts\\m3-real\\model.joblib": "c17877f5af4d4176f7f296b941acd96b1d8c09e2af573efe4e10929c0fc44fe7",
+        "artifacts\\m4-real\\manifest.json": "71a82c03cd704519d106da93e83e10ce467307e6fa8fdf181dc490e4dff279df",
+        "artifacts\\m5-real\\manifest.json": "d713ba6cfe5165bb68146517137b776a63e188c3b410096355692d5f1439b5b6"
+      },
+      "detail": "Los 6 modelos y cascadas (M0-M3 joblib y M4-M5 manifest) tienen hashes SHA-256 registrados y verificados."
+    },
+    "check_3_comparisons_have_statistical_tests": {
+      "status": "PASS",
+      "total_statistical_comparisons": 14,
+      "confirmatory_count": 6,
+      "exploratory_count": 8,
+      "detail": "Todas las comparaciones pareadas cuentan con test exacto de McNemar, correccion Holm-Bonferroni y tres tamanos de efecto (Cohen g, Cohen h, OR)."
+    },
+    "check_4_main_metrics_have_ci95": {
+      "status": "PASS",
+      "models_with_sample_and_cluster_ci": [
+        "M0",
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5_FailClosed",
+        "HybridM0_ConfigA",
+        "ConfigC_HybridCascade",
+        "M0_External_Raw",
+        "HybridM0_WithTranco_External",
+        "HybridM0_NoTranco_External"
+      ],
+      "detail": "Todas las metricas principales disponen de IC 95% mediante bootstrap de muestra y cluster bootstrap por dominio registrado."
+    },
+    "check_5_zero_domain_overlap_train_vs_external": {
+      "status": "PASS",
+      "external_unique_registered_domains": 1054,
+      "training_unique_registered_domains": 130047,
+      "overlapping_domains_count": 0,
+      "detail": "0 solapamientos de dominio registrado PSL entre external_validation_dataset_n1200.csv y samples.csv (2,606 candidatos contaminados excluidos)."
+    },
+    "check_6_abstentions_never_counted_as_hits": {
+      "status": "PASS",
+      "abstained_total": 29,
+      "abstained_phishing": 21,
+      "abstained_legitimate": 8,
+      "coverage_decided": 0.958032,
+      "detail": "Las 29 abstenciones de M5 se evaluan separadamente bajo politicas Selective (N=662), Fail-Open (F1=0.8857) y Fail-Closed (F1=0.9387)."
+    },
+    "check_7_inaccessible_urls_documented_ite_vs_cc": {
+      "status": "PASS",
+      "intention_to_evaluate_count": 240,
+      "complete_case_count": 104,
+      "attrition_rate": 0.5667,
+      "detail": "136 URLs inaccesibles documentadas con codigos de error DNS/TLS/WAF en external_multimodal_probe_n240.jsonl."
+    },
+    "check_8_hybrid_m0_separated_from_cascade": {
+      "status": "PASS",
+      "config_a_endpoint": "POST /check",
+      "config_b_endpoint": "/analyze/cascade (UnifiedModelManager)",
+      "config_c_architecture": "HybridM0 (Etapa 0) -> M1 -> M2/M5",
+      "detail": "Las 3 configuraciones estan estrictamente diferenciadas en 03_EXTENSION_REAL.md y el registro per-request."
+    },
+    "check_9_zero_secrets_in_artifacts_and_zip": {
+      "status": "PASS",
+      "secret_findings_count": 0,
+      "findings": [],
+      "detail": "0 secretos ni credenciales encontradas en los artefactos y codigos de validacion."
+    },
+    "check_10_all_deliverables_present_and_docx_unmodified": {
+      "status": "PASS",
+      "all_markdown_deliverables_present": true,
+      "docx_files_untouched": true,
+      "docx_audit": {
+        "PhishPe_Article_APA7.docx": {
+          "matches_original": true,
+          "hash": "8c09fa0114f039057bbc5782498af62eb3799a3ebd60193606aa1733f1c77262"
+        },
+        "PhishGuard_Article_APA7.docx": {
+          "matches_original": true,
+          "hash": "8c09fa0114f039057bbc5782498af62eb3799a3ebd60193606aa1733f1c77262"
+        }
+      },
+      "detail": "Los 11 entregables principales existen y estan poblados; los dos manuscritos Word permanecen 100% intactos con hash SHA-256 verificado."
+    }
+  }
+}

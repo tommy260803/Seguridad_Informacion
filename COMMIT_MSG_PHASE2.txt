@@ -1,0 +1,92 @@
+corrección y validación final de PhishPe: BUG-01..08, cohorte2 ≥1000 URL, E2E en Chrome real
+
+Rama: corrections-phase2 (desde experimental/validacion-scopus-fase2).
+Commit base inmutable: ceb0c9e62ab861ce993bd3a1ec636d4d4b3405b7 ("Config A/B" original).
+Los manuscritos de artículo (PhishPe_Article_APA7.docx / PhishGuard_Article_APA7.docx)
+NO se modifican en esta fase. Los artefactos pesados (artifacts/, ZIP de evidencia)
+quedan fuera de Git por .gitignore; la evidencia se entrega como
+evidencia_phishpe_definitiva.zip + .sha256 (SHA-256 4a346d5fe784a6336f4ed029704dedf78e2ed11f7bfa0ab535204ee50763817d).
+
+1) Defectos corregidos (todos con pruebas de regresión, 47 tests en
+   tests/test_corrections_phase2.py):
+   - BUG-01: timeout de cliente fijado a 8000 ms (src/phishguard_api/inference.py).
+   - BUG-02: resolución DNS asíncrona con asyncio.to_thread (no bloquea el event loop).
+   - BUG-03: punycode decodificado etiqueta a etiqueta y comparación por dominio
+     registrado (src/phishguard_ml/homoglyphs.py).
+   - BUG-04: abstention_threshold separado en decide_next
+     (src/phishguard_orchestrator/engine.py); barrido 0.01/0.20/0.99 => 119/119/12 abstenciones.
+   - BUG-05: force_visual eliminado; modalidad visual no disponible degrada con honestidad.
+   - BUG-06: mezcla LLM 0.7*p + 0.3*llm (src/phishguard_api/llm_agent.py); validación
+     contra API de pago NO ejecutada por falta de autorización (limitación L2 declarada).
+   - BUG-07: _strip_www en features (src/phishguard_ml/features.py); experimento pareado:
+     FPR en legítimas con www 100% -> 5.33%, discordancias 170/300 -> 0/300; con pesos
+     congelados sin reentrenar hay costo en recall de phishing www (trade-off documentado,
+     recomendación reentrenar M0).
+   - BUG-08: regresión en levenshtein_distance (previous_row dentro del bucle DP,
+     src/phishguard_ml/homoglyphs.py); lev('t','microsoft') dejó de dar 0; disparos de
+     homógrafo en cohorte2 pasan de 36 (1 legítimo injustificado) a 7 (todos phishing, 0
+     legítimos); FPR Config C 0.0083 -> 0.0067.
+
+2) Batería completa: 174 tests, 0 fallos, 0 omitidos
+   (artifacts/corrections_phase2/junit_full_suite.xml, exit=0).
+
+3) Protocolo congelado (scripts/phase2a..phase2k, ninguno altera etiquetas ni modelos tras
+   el freeze):
+   - phase2a_freeze.py: freeze #3 = 0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41
+     (historial de 3 freezes en artifacts/corrections_phase2/FREEZE_HISTORY.md; ningún
+     freeze cambió pesos ni umbrales; invariantes comparados entre manifiestos).
+   - phase2b_acquire_cohort2.py: segunda cohorte independiente N=1200 (600/600),
+     SHA-256 bb8f6284a6779a98cb4a3bec65eaac86f15dfa196713358129535bd131e32f73, sin solape
+     con el corpus (176.201 URL / 130.047 dominios registrados) ni con la cohorte previa;
+     candidatos descartados trazados (588.167 filas con motivo).
+   - phase2c_evaluate_cohort2.py: M0 original F1 0.8829 vs normalizado 0.8707 (12
+     discordancias, McNemar p=0.000488, Holm p=0.001465); Config A 0.8593 vs C 0.8550
+     (4 discordancias, p=0.125, no significativo).
+   - phase2d..2i: redirecciones/shorteners, reconciliación de estadísticas históricas
+     (14/14 filas reproducidas exactas), regresiones de auditoría manual, efecto BUG-03,
+     construcción programática de entregables.
+   - phase2e_verify_historical_stats.py: el CSV histórico 07_all_hypothesis_tests_table.csv
+     es 14/14 reproducible; se corrigió el TEXTO de 07_ANALISIS_ESTADISTICO.md (E1 y E2
+     estaban mal transcritos) con nota de corrección; ninguna conclusión cambia.
+   - phase2g_verify_manual_audit_regressions.py: xn--pple-43d.com => is_spoofing=True con
+     5 controles negativos, controles cortos BUG-08 5/5 falsos, valores Levenshtein vs
+     implementación de referencia independiente; overall_PASS=true.
+   - phase2h_build_deliverables.py: COMPARACION_ANTES_DESPUES.csv (20 filas),
+     MATRIZ_TRAZABILIDAD_FINAL.csv (8 defectos con SHA-256 real por archivo de evidencia),
+     VALIDACION_FINAL_AUTOMATICA.json (12 checks -> 12 PASS, dictamen PASS); ninguna cifra
+     se escribe a mano.
+   - phase2j_pack_evidence.py: empaqueta ZIP de evidencia con manifiesto interno por archivo.
+   - phase2k_summarize_e2e.py: genera E2E_CHROME_RESULTS.md calculando todas las cifras
+     desde artifacts/e2e_chrome/ (summary.json, requests.jsonl, versiones de navegador).
+
+4) E2E en navegador real (artifacts/e2e_chrome/, driver scripts/e2e_chrome_phase2.py):
+   - Chrome-for-Testing 156.0.8078.4 (binario real, extensión unpacked, backend real
+     uvicorn en :8080, HTTP público; sin ASGI ni mocks como prueba principal).
+   - Chrome de marca 155.0.8059.40 RECHAZA --load-extension (evidencia literal en
+     branded_chrome_load_extension.log); limitación declarada como L10.
+   - 27 escenarios: 25 PASS / 2 NOT_RUN declarados (l_concurrency y o_cascade_analyses
+     incompletos; nunca simulados).
+   - Timeout BUG-01 verificado en navegador: abortos a 8010 ms y 8004 ms en escenarios
+     deliberados; 0 timeouts espontáneos en las otras 38 llamadas (2/40 = 5%).
+   - Percentiles reales: resource-timing p50 40 / p95 3808 / p99 8008 ms (n=49);
+     navegación->insignia p50 861 / p95 4937 ms (n=45); wrapper fetch p50 497 / p95 2196 ms.
+
+5) Correcciones documentales de reproducibilidad (REPRODUCIBILIDAD.md resuelve R1..R7):
+   - "105.541 dominios únicos" retirado como insostenible; valores recomputados desde
+     data/processed/0.1.0/samples.csv (SHA-256 947350f0...): 176.201 URL / 141.247 hosts /
+     130.047 dominios registrados.
+   - Fechas "2026-04-12" en 02/03/05 corregidas a 2026-10-12 con nota (typo).
+   - Resumen para artículo reescrito con cifras reales y lista explícita de afirmaciones
+     que NO deben incluirse.
+
+6) Entregables: INFORME_FINAL_PHISHPE_CORREGIDO.md, COMPARACION_ANTES_DESPUES.csv,
+   MATRIZ_TRAZABILIDAD_FINAL.csv, VALIDACION_FINAL_AUTOMATICA.json (12/12 PASS),
+   LIMITACIONES_RESTANTES.md (L1..L10 con impacto medido), RESUMEN_DEFINITIVO_PARA_ARTICULO.md,
+   REPRODUCIBILIDAD.md, E2E_CHROME_RESULTS.md.
+
+7) Notas de higiene: se elimina scripts/generate_synthetic_results.py (generador de
+   resultados sintéticos, inaceptable para revisión por pares); .gitignore ampliado con
+   evidencia_*.zip/*.sha256 (los ZIP de fases anteriores quedan en disco, fuera de Git);
+   barrido de secretos/credenciales pre-commit: 114 archivos escaneados, 0 coincidencias.
+
+Pendiente conocido: evaluación LLM con API de pago (BUG-06) requiere autorización (L2).

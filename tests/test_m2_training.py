@@ -1,5 +1,8 @@
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from phishguard_ml.config import load_baseline_config
 from phishguard_ml.m2_training import train_m2
@@ -41,7 +44,7 @@ def test_m2_training_combines_versioned_feature_families(tmp_path: Path) -> None
     registry = json.loads((output / "feature-registry.json").read_text(encoding="utf-8"))
     manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
     assert metrics["feature_profile"] == "authority_only_plus_infrastructure_plus_content"
-    assert registry["content_feature_version"] == "content-features-1.0.0"
-    assert len(registry["active_features"]) == 50
+    assert registry["content_feature_version"] == "content-features-2.0.0"
+    assert len(registry["active_features"]) == 62
     assert manifest["feature_version"] == "url-features-1.0.0"
     assert (output / "model.joblib").is_file()

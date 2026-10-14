@@ -6,11 +6,21 @@ from typing import Any
 
 import numpy as np
 
-VISUAL_FEATURE_VERSION = "visual-features-1.0.0"
+VISUAL_FEATURE_VERSION = "visual-features-2.0.0"
 VISUAL_FEATURE_NAMES = (
-    "visual_observation_available", "visual_width", "visual_height", "visual_aspect_ratio",
-    "visual_mean_luminance", "visual_luminance_std", "visual_edge_density",
-    "visual_dark_pixel_ratio", "visual_saturated_pixel_ratio",
+    "visual_observation_available",
+    "visual_width",
+    "visual_height",
+    "visual_aspect_ratio",
+    "visual_mean_luminance",
+    "visual_luminance_std",
+    "visual_edge_density",
+    "visual_dark_pixel_ratio",
+    "visual_saturated_pixel_ratio",
+    "visual_brand_detected",
+    "visual_brand_similarity",
+    "visual_phash_distance_min",
+    "visual_hsv_similarity_max",
 )
 
 
@@ -19,7 +29,7 @@ def extract_visual_features(result: dict[str, Any] | None) -> dict[str, float]:
     if result is None:
         return values
     status = result.get("status")
-    if status not in {"success", "blocked", "error"}:
+    if status not in {"success", "blocked", "error", "unreachable", "not_captured"}:
         raise ValueError(f"Unsupported visual status: {status!r}")
     values["visual_observation_available"] = float(status == "success")
     raw = result.get("features") or {}
@@ -36,11 +46,21 @@ def extract_visual_features(result: dict[str, Any] | None) -> dict[str, float]:
 
 def load_visual_results(path: str | Path) -> dict[str, dict[str, Any]]:
     results: dict[str, dict[str, Any]] = {}
-    for line_number, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+    source_path = Path(path)
+    if not source_path.exists():
+        return results
+    for line_number, line in enumerate(source_path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
         try:
             row = json.loads(line)
             sample_id, result = row["sample_id"], row["result"]
-            if not isinstance(sample_id, str) or not sample_id or sample_id in results or not isinstance(result, dict):
+            if (
+                not isinstance(sample_id, str)
+                or not sample_id
+                or sample_id in results
+                or not isinstance(result, dict)
+            ):
                 raise ValueError
             extract_visual_features(result)
             results[sample_id] = result
@@ -51,7 +71,13 @@ def load_visual_results(path: str | Path) -> dict[str, dict[str, Any]]:
 
 def visual_feature_matrix(sample_ids: list[str], results_path: str | Path | None) -> np.ndarray:
     results = load_visual_results(results_path) if results_path else {}
-    matrix = np.asarray([[extract_visual_features(results.get(sample_id))[name] for name in VISUAL_FEATURE_NAMES] for sample_id in sample_ids], dtype=np.float64)
+    matrix = np.asarray(
+        [
+            [extract_visual_features(results.get(sample_id))[name] for name in VISUAL_FEATURE_NAMES]
+            for sample_id in sample_ids
+        ],
+        dtype=np.float64,
+    )
     if matrix.shape != (len(sample_ids), len(VISUAL_FEATURE_NAMES)) or not np.isfinite(matrix).all():
         raise ValueError("Visual feature matrix is invalid")
     return matrix

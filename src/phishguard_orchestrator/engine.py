@@ -28,12 +28,20 @@ def decide_next(
 ) -> tuple[str, str, float, float]:
     uncertainty = _uncertainty(probability_phishing)
     confidence = 1.0 - uncertainty
+    # Early stopping: if uncertainty is below threshold, we have enough evidence to decide
     if confidence >= policy.minimum_confidence or uncertainty <= policy.uncertainty_threshold:
         return "decide", "evidence_sufficient", confidence, uncertainty
+    # Try to consult a modality if available and within budget
     for modality in ("infrastructure", "content", "visual"):
         if modality not in consulted and policy.costs.get(modality, 0.0) <= policy.budget:
             return modality, "uncertainty_above_threshold", confidence, uncertainty
-    return "abstain", "budget_exhausted_or_no_evidence", confidence, uncertainty
+    # No more modalities and uncertainty above the early-stop threshold -> apply the
+    # *final abstention* threshold, which is deliberately separate from the early-stop
+    # threshold (regression BUG-04).
+    if uncertainty > policy.abstention_threshold:
+        return "abstain", "budget_exhausted_or_no_evidence", confidence, uncertainty
+    # Uncertainty is low enough to decide even without more modalities
+    return "decide", "evidence_sufficient", confidence, uncertainty
 
 
 def run_adaptive(

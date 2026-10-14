@@ -78,6 +78,12 @@ class DetectionRules:
         "rb.gy", "freebitco.in", "tiny.cc", "lnkd.in"
     })
     
+    # Shortener domains that require redirect following for safety
+    SHORTENERS_REQUIRING_REDIRECT = frozenset({
+        "bit.ly", "tinyurl.com", "goo.gl", "is.gd",
+        "buff.ly", "ow.ly", "t.ly", "cutt.ly", "shorturl.at"
+    })
+    
     # Homograph characters (Cyrillic, Greek that look like Latin)
     HOMOGRAPH_CHARS = {
         'а': 'a',  # Cyrillic а
@@ -250,7 +256,7 @@ class DetectionRules:
         results.append(self._check_long_url(url))
         
         # Run slow rules concurrently (geolocation, whois, brand_mismatch)
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeout
         slow_rules = {
             "geo": lambda: self._check_server_geolocation(hostname),
             "age": lambda: self._check_domain_age(hostname),
@@ -259,12 +265,18 @@ class DetectionRules:
         slow_results = {}
         with ThreadPoolExecutor(max_workers=3) as executor:
             futures = {executor.submit(fn): key for key, fn in slow_rules.items()}
-            for future in as_completed(futures, timeout=8):
-                key = futures[future]
-                try:
-                    slow_results[key] = future.result()
-                except Exception:
-                    slow_results[key] = None
+            try:
+                for future in as_completed(futures, timeout=8):
+                    key = futures[future]
+                    try:
+                        slow_results[key] = future.result()
+                    except Exception:
+                        slow_results[key] = None
+            except FuturesTimeout:
+                # Timeout: mark all pending rules as failed/skipped
+                for key in futures:
+                    if key not in slow_results:
+                        slow_results[key] = None
         
         geo_result = slow_results.get("geo")
         brand_mismatch = slow_results.get("brand")
@@ -338,17 +350,28 @@ class DetectionRules:
         )
     
     def _check_url_shortener(self, hostname: str) -> RuleResult:
-        """Check if URL uses a shortener service."""
+        """Check if URL uses a shortener service.
+        
+        For shorteners that require redirect following (bit.ly, tinyurl.com, etc.),
+        the rule flags them with high confidence so the orchestrator can decide
+        to follow the redirect before continuing analysis.
+        """
         is_shortener = hostname in self.URL_SHORTENERS or any(
             hostname.endswith(f".{s}") for s in self.URL_SHORTENERS
         )
         
+        requires_redirect = is_shortener and hostname in self.SHORTENERS_REQUIRING_REDIRECT
+        
+        confidence = 0.9 if requires_redirect else (0.6 if is_shortener else 0.0)
+        
+        reason_prefix = "Servicio acortador detectado requiere seguimiento de redirect: " if requires_redirect else "Servicio acortador detectado: "
+        
         return RuleResult(
             rule_name="url_shortener",
             triggered=is_shortener,
-            confidence=0.6 if is_shortener else 0.0,
-            reason=f"Servicio acortador detectado: {hostname}" if is_shortener else "Sin acortador",
-            details={"shortener": hostname} if is_shortener else None
+            confidence=confidence,
+            reason=f"{reason_prefix}{hostname}" + (" (se recomienda seguir redirect)" if requires_redirect else ""),
+            details={"shortener": hostname, "requires_redirect": requires_redirect} if is_shortener else None
         )
     
     def _check_suspicious_path(self, path: str) -> RuleResult:

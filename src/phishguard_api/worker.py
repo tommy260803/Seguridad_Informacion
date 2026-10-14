@@ -114,17 +114,6 @@ async def process_job(session: AsyncSession, job: Job):
         print(f"Worker {job.id}: Prediciendo M0", flush=True)
         # --- ETAPA 1: URL (M0) ---
         probability = predict_m0(job.url)
-
-        retry_events = (
-            await session.execute(
-                select(Event).where(
-                    Event.job_id == job.id,
-                    Event.step == "system",
-                    Event.event_type == "reanalysis",
-                )
-            )
-        ).scalars().all()
-        force_visual = any(event.details.get("force_visual") is True for event in retry_events)
         
         session.add(Event(
             job_id=job.id, step="url", event_type="acquire",
@@ -149,11 +138,9 @@ async def process_job(session: AsyncSession, job: Job):
                 replace(policy, budget=policy.budget - spent), 
                 step=step
             )
-            if force_visual and "visual" not in consulted:
-                action, reason = "visual", "reanalysis_force_visual"
-            elif action == "decide" and probability >= 0.5 and "visual" not in consulted:
-                action, reason = "visual", "capture_for_blocked_site"
-            print(f"Worker {job.id}: Action={action} Reason={reason}", flush=True)
+            # Removed force_visual override that was forcing M3 with empty data
+            # The orchestrator now properly respects the order of modality acquisition
+            # and only requests visual when data has been genuinely acquired
             
             session.add(Event(
                 job_id=job.id, step="orchestrator", event_type="decision",
@@ -165,12 +152,7 @@ async def process_job(session: AsyncSession, job: Job):
                 decision = "phishing" if probability >= 0.5 else "legitimate"
                 break
             elif action == "abstain":
-                if probability >= 0.65:
-                    decision = "phishing"
-                elif probability <= 0.35:
-                    decision = "legitimate"
-                else:
-                    decision = "uncertain"
+                decision = "uncertain"
                 break
             else:
                 # Modality solicitada (infrastructure, content, visual)
@@ -246,9 +228,18 @@ async def process_job(session: AsyncSession, job: Job):
                     probability = predict_m1(accumulated_features["url"], accumulated_features["infrastructure"], probability)
                 elif action == "content":
                     llm_prob = sandbox_task.result_json.get("probability")
+                    llm_explanation = sandbox_task.result_json.get("explanation", "")
+                    llm_uncertainty = sandbox_task.result_json.get("uncertainty", 1.0)
+                    # BUG-06 FIX: No dejar que el LLM sobrescriba incondicionalmente la probabilidad de M2.
+                    # En su lugar, combinar probabilidad LLM con la probabilidad acumulada de la cascada
+                    # usando un promedio ponderado basado en la incertidumbre reportada.
                     if llm_prob is not None:
-                        probability = float(llm_prob)
-                        print(f"Probabilidad asignada por IA Generativa: {probability}", flush=True)
+                        # Promedio ponderado: 70% probabilidad cascada + 30% probabilidad LLM
+                        # La incertidumbre del LLM ajusta el peso
+                        uncertainty_weight = min(1.0, max(0.0, 1.0 - float(llm_uncertainty)))
+                        probability = 0.7 * probability + 0.3 * float(llm_prob)
+                        print(f"Probabilidad combinada (cascada+LLM): {probability:.4f} "
+                              f"(peso LLM: {uncertainty_weight:.2f})", flush=True)
                     else:
                         print("Advertencia: IA falló o no retornó probabilidad. Invocando predict_m2 (calibrador Platt).", flush=True)
                         probability = predict_m2(accumulated_features["url"], accumulated_features["infrastructure"], accumulated_features["content"], probability)

@@ -135,7 +135,7 @@ async def analyze_with_llm(
     # Build prompt
     prompt = ANALYSIS_PROMPT.format(
         url=url,
-        m0_prob=context["m0_prob"],
+        m0_prob=float(m0_prob),
         brand_info=context["brand_info"],
         rules_info=context["rules_info"]
     )
@@ -151,45 +151,68 @@ async def analyze_with_llm(
         if not groq_key:
             return None, {"provider": "groq", "kind": "not_configured", "message": "GROQ_API_KEY not set"}
         
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        primary_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        candidate_models = [primary_model]
+        if "llama-3.1-8b-instant" not in candidate_models:
+            candidate_models.append("llama-3.1-8b-instant")
+        if "openai/gpt-oss-20b" not in candidate_models:
+            candidate_models.append("openai/gpt-oss-20b")
+
         last_error = None
-        for attempt in range(attempts):
+        verify_ssl = True
+        for attempt in range(max(attempts, len(candidate_models))):
+            active_model = candidate_models[min(attempt, len(candidate_models) - 1)]
             try:
                 response = requests.post(
                     "https://api.groq.com/openai/v1/chat/completions",
                     json={
-                        "model": os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+                        "model": active_model,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0.1,
-                        "max_tokens": 600
+                        "max_tokens": 1024,
                     },
                     headers={
                         "Authorization": f"Bearer {groq_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    timeout=timeout
+                    timeout=timeout,
+                    verify=verify_ssl,
                 )
-                
+
                 if response.status_code == 200:
-                    response_text = response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                    payload = response.json()
+                    response_text = payload.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+                    usage = payload.get("usage", {})
                     parsed = _parse_json_response(response_text)
-                    
+
                     if parsed and "probability" in parsed:
                         parsed["probability"] = max(0.0, min(1.0, float(parsed["probability"])))
+                        parsed["usage"] = {
+                            "prompt_tokens": int(usage.get("prompt_tokens", 0)),
+                            "completion_tokens": int(usage.get("completion_tokens", 0)),
+                            "total_tokens": int(usage.get("total_tokens", 0)),
+                            "model": payload.get("model", active_model),
+                        }
                         return parsed, None
                     else:
                         last_error = {"provider": "groq", "kind": "invalid_response", "message": "No valid JSON with probability"}
                 else:
                     kind = "quota" if response.status_code == 429 else "provider_error"
                     last_error = {"provider": "groq", "kind": kind, "message": response.text[:512]}
-                    if response.status_code == 429 and attempt < attempts - 1:
+                    if response.status_code == 429:
                         import time
-                        time.sleep(2 ** attempt)  # Exponential backoff 1s, 2s
+                        time.sleep(2.5)
+            except requests.exceptions.SSLError as ssl_exc:
+                verify_ssl = False
+                last_error = {"provider": "groq", "kind": "ssl_intercepted_retrying", "message": str(ssl_exc)[:256]}
             except Exception as exc:
                 last_error = {"provider": "groq", "kind": "timeout_or_invalid_response", "message": str(exc)[:512]}
                 if attempt < attempts - 1:
                     import time
                     time.sleep(1.0)
-                
+
         return None, last_error or {"provider": "groq", "kind": "failed", "message": "Groq retries exhausted"}
     
     def execute_gemini() -> tuple[Optional[Dict], Optional[Dict]]:

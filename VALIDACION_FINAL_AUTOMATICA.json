@@ -1,0 +1,184 @@
+{
+  "generated_utc": "2026-10-14T16:05:53.190148+00:00",
+  "protocol": "congelar -> construir cohorte (etiquetas) -> evaluar (ver artifacts/corrections_phase2/FREEZE_HISTORY.md)",
+  "freeze": {
+    "manifest_sha256": null,
+    "frozen_at_utc": "2026-10-14T04:12:59.503358+00:00",
+    "git_commit": null,
+    "dirty": null
+  },
+  "n_checks": 12,
+  "n_pass": 12,
+  "n_fail": 0,
+  "dictamen": "PASS",
+  "checks": [
+    {
+      "id": "T-01",
+      "descripcion": "Suite completa de pruebas sin fallos (incluye 32+15 nuevas pruebas de regresion)",
+      "resultado": "PASS",
+      "valor_observado": "tests=174 failures=0 errors=0 skipped=0",
+      "evidencia": "artifacts/corrections_phase2/junit_full_suite.xml"
+    },
+    {
+      "id": "T-02",
+      "descripcion": "Congelacion verificada al inicio de la evaluacion (codigo, modelos, umbrales)",
+      "resultado": "PASS",
+      "valor_observado": "ok=True mismatches=[]",
+      "evidencia": "artifacts/corrections_phase2/freeze_manifest.json"
+    },
+    {
+      "id": "T-03",
+      "descripcion": "BUG-03: xn--pple-43d.com detectado como suplantacion (caso exacto de la auditoria)",
+      "resultado": "PASS",
+      "valor_observado": "is_spoofing=True",
+      "evidencia": "artifacts/corrections_phase2/eval/manual_audit_regressions.json"
+    },
+    {
+      "id": "T-04",
+      "descripcion": "BUG-03 sin falsos positivos: controles negativos siguen en False",
+      "resultado": "PASS",
+      "valor_observado": "5 controles, 0 spoofing",
+      "evidencia": "artifacts/corrections_phase2/eval/manual_audit_regressions.json"
+    },
+    {
+      "id": "T-05",
+      "descripcion": "BUG-04: abstention_threshold 0.01/0.99 cambia la decision (caso exacto de la auditoria)",
+      "resultado": "PASS",
+      "valor_observado": "{\"0.01\": {\"action\": \"abstain\", \"reason\": \"budget_exhausted_or_no_evidence\"}, \"0.2\": {\"action\": \"abstain\", \"reason\": \"budget_exhausted_or_no_evidence\"}, \"0.99\": {\"action\": \"decide\", \"reason\": \"evidence_sufficient\"}}",
+      "evidencia": "artifacts/corrections_phase2/eval/manual_audit_regressions.json"
+    },
+    {
+      "id": "T-06",
+      "descripcion": "BUG-04 ejercitado sobre datos EXTERNOS (barrido 0.01/0.20/0.99)",
+      "resultado": "PASS",
+      "valor_observado": "abstenciones 119/119/12 (coverage 0.802/0.802/0.980)",
+      "evidencia": "artifacts/corrections_phase2/eval/probe_and_cascade_metrics.json"
+    },
+    {
+      "id": "T-07",
+      "descripcion": "BUG-07: FPR en legitimos con www eliminado (experimento pareado N=300 pares)",
+      "resultado": "PASS",
+      "valor_observado": "1.0000 -> 0.0533; discordancias 170/300 -> 0/300",
+      "evidencia": "artifacts/corrections_phase2/eval/www_paired_experiment.json"
+    },
+    {
+      "id": "T-08",
+      "descripcion": "BUG-08: sin falsos positivos de homografo en acortadores cortos (t.ly, t.is, s.id)",
+      "resultado": "PASS",
+      "valor_observado": "lev(t,microsoft)=8; hosts cortos is_spoofing=False 5/5",
+      "evidencia": "artifacts/corrections_phase2/eval/manual_audit_regressions.json"
+    },
+    {
+      "id": "T-09",
+      "descripcion": "Cohorte2 N>=1000 sin solape con el corpus interno ni con la cohorte externa previa",
+      "resultado": "PASS",
+      "valor_observado": "N=1200 (600 phishing + 600 legitima), solape=0 verificado en phase2b",
+      "evidencia": "artifacts/corrections_phase2/cohort2/cohort2_dataset.csv"
+    },
+    {
+      "id": "T-10",
+      "descripcion": "Las 14 filas del CSV de pruebas pareadas historico se recomputan exactamente",
+      "resultado": "PASS",
+      "valor_observado": "match=14/14 dictamen=PASS: todas las filas del CSV publicado son reproducibles desde los predictions.csv congelados",
+      "evidencia": "artifacts/corrections_phase2/eval/historical_stats_reconciliation.json"
+    },
+    {
+      "id": "T-11",
+      "descripcion": "Intention-to-evaluate y complete-case separados; abstenciones no cuentan como aciertos",
+      "resultado": "PASS",
+      "valor_observado": "ITE N=600, CC N=247 (completitud phishing 0.133 vs legitima 0.690)",
+      "evidencia": "artifacts/corrections_phase2/eval/probe_and_cascade_metrics.json"
+    },
+    {
+      "id": "T-12",
+      "descripcion": "E2E en Chrome REAL ejecutado (no ASGI/mocks como prueba principal)",
+      "resultado": "PASS",
+      "valor_observado": "E2E_CHROME_RESULTS.md",
+      "evidencia": "artifacts/e2e_chrome/"
+    }
+  ],
+  "defect_fix_records": [
+    {
+      "ID": "BUG-01",
+      "Defecto": "Timeout de cliente 4000 ms aborta paginas legitimas lentas",
+      "Correccion": "Presupuesto de cliente a 8000 ms",
+      "Prueba_regresion": "TestBug01TimeoutBudget (3 pruebas, servidor lento de 6 s)",
+      "Evidencia_archivo": "tests/test_corrections_phase2.py",
+      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Metrica_clave": "0 timeouts falsos en escenarios lentos",
+      "Estado": "CORREGIDO"
+    },
+    {
+      "ID": "BUG-02",
+      "Defecto": "DNS bloqueante congela el bucle de eventos",
+      "Correccion": "socket.getaddrinfo movido a asyncio.to_thread",
+      "Prueba_regresion": "TestBug02AsyncDns (4 pruebas, incl. vivacidad del bucle con getaddrinfo +3 s)",
+      "Evidencia_archivo": "tests/test_corrections_phase2.py",
+      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Metrica_clave": "bucle de eventos responde durante resolucion DNS",
+      "Estado": "CORREGIDO"
+    },
+    {
+      "ID": "BUG-03",
+      "Defecto": "Punycode xn--pple-43d no decodificado (regex descartaba guiones) -> evasion de homografos",
+      "Correccion": "Decodificado etiqueta-a-etiqueta + comparacion punycode_to_unicode(dominio registrado) vs dominio oficial",
+      "Prueba_regresion": "TestBug03HomoglyphPunycode (12 pruebas) + verificacion manual de la auditoria",
+      "Evidencia_archivo": "artifacts/corrections_phase2/eval/manual_audit_regressions.json",
+      "Evidencia_SHA256": "f06904d677e10b50f3ad09fe5b7787850d653cd9d2ae57d413ae87d646cdb05c",
+      "Metrica_clave": "is_spoofing False->True en xn--pple-43d; disparadores ruta critica en cohorte 1->7 (todos phishing, 0 falsos positivos de marca tras corregir BUG-08)",
+      "Estado": "CORREGIDO"
+    },
+    {
+      "ID": "BUG-04",
+      "Defecto": "El motor ignoraba abstention_threshold final (usaba uncertainty_threshold)",
+      "Correccion": "Umbral de abstención final separado (policy.abstention_threshold) en decide_next",
+      "Prueba_regresion": "TestBug04SeparateThresholds (5 pruebas) + barrido externo 0.01/0.20/0.99",
+      "Evidencia_archivo": "artifacts/corrections_phase2/eval/probe_and_cascade_metrics.json",
+      "Evidencia_SHA256": "543d04329236cea521824eb3b5b4fe01128b99f8851b8554826d4cda9a30de26",
+      "Metrica_clave": "abstenciones 119/119/12 con umbrales 0.01/0.20/0.99 sobre datos externos (antes: decision identica con cualquier valor)",
+      "Estado": "CORREGIDO"
+    },
+    {
+      "ID": "BUG-05",
+      "Defecto": "El orquestador forzaba la etapa visual aunque no hubiera M3",
+      "Correccion": "force_visual eliminado; modalidad no disponible se marca consultada (fallback)",
+      "Prueba_regresion": "TestBug05NoForcedVisualStage (2 pruebas) + cascade run externo",
+      "Evidencia_archivo": "tests/test_corrections_phase2.py",
+      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Metrica_clave": "0 casos 'no_available_modality' silenciosos; motivos de decision: {\"evidence_sufficient\": 481, \"budget_exhausted_or_no_evidence\": 119}",
+      "Estado": "CORREGIDO"
+    },
+    {
+      "ID": "BUG-06",
+      "Defecto": "El resultado del LLM sobrescribia la probabilidad de la cascada",
+      "Correccion": "Mezcla explicita 0.7*p_cascada + 0.3*p_LLM",
+      "Prueba_regresion": "TestBug06LlmBlend (3 pruebas)",
+      "Evidencia_archivo": "tests/test_corrections_phase2.py",
+      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Metrica_clave": "combinacion lineal verificada; evaluacion con LLM de pago NO autorizada (limitacion)",
+      "Estado": "CORREGIDO (codigo)"
+    },
+    {
+      "ID": "BUG-07",
+      "Defecto": "Sin normalizacion de www, un host www legitimo era phishing (atajo aprendido)",
+      "Correccion": "_strip_www() aplicado en la canalizacion de caracteristicas",
+      "Prueba_regresion": "TestBug07StripWww (3 pruebas) + experimento pareado www/no-www N=300 pares",
+      "Evidencia_archivo": "artifacts/corrections_phase2/eval/www_paired_experiment.json",
+      "Evidencia_SHA256": "8ee0611716e79f859f16207471b71713dfe1979fddce083294ca2b3a918b2509",
+      "Metrica_clave": "FPR en legitimos con www 1.00->0.0533; discordancias 170/300 -> 0/300",
+      "Estado": "CORREGIDO (con coste de recall documentado: modelo congelado sin reentrenar)"
+    },
+    {
+      "ID": "BUG-08",
+      "Defecto": "Levenshtein DP rota (previous_row fuera del bucle) -> falsos positivos t.ly/t.is",
+      "Correccion": "Asignacion previous_row=current_row devuelta al interior del bucle externo + comentario",
+      "Prueba_regresion": "TestBug08LevenshteinDp (15 pruebas contra implementacion de referencia)",
+      "Evidencia_archivo": "tests/test_corrections_phase2.py",
+      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Metrica_clave": "lev('t','microsoft') 0->8; t.ly/t.is/s.id dejan de marcar suplantacion de marca",
+      "Estado": "CORREGIDO"
+    }
+  ],
+  "n_defect_fix_records": 8,
+  "note_checks_equals_records": "n_checks y n_defect_fix_records se calculan de sus propias listas; no hay registros marcadores."
+}

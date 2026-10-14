@@ -113,6 +113,7 @@ def test_m1_training_produces_reproducible_artifacts(tmp_path: Path) -> None:
     registry = json.loads((output / "feature-registry.json").read_text(encoding="utf-8"))
     assert metrics["feature_profile"] == "authority_only_plus_infrastructure"
     assert set(metrics["partitions"]) == {"train", "validation", "test"}
-    assert registry["infrastructure_feature_version"] == "infra-features-1.0.0"
+    assert registry["infrastructure_feature_version"] == "infra-features-2.0.0"
+    assert len(registry["active_features"]) == 36
     assert (output / "model.joblib").is_file()
     assert (output / "predictions.csv").read_text(encoding="utf-8").count("\n") == 61

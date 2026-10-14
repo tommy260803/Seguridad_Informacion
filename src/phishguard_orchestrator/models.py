@@ -9,7 +9,8 @@ MODALITIES = ("url", "infrastructure", "content", "visual")
 
 @dataclass(frozen=True)
 class AdaptivePolicy:
-    uncertainty_threshold: float = 0.20
+    uncertainty_threshold: float = 0.15  # Early stopping threshold: if uncertainty <= this, stop and decide
+    abstention_threshold: float = 0.20   # Final abstention threshold: if no modalities left and uncertainty > this, abstain
     minimum_confidence: float = 0.80
     budget: float = 3.0
     costs: dict[str, float] = field(default_factory=lambda: {"infrastructure": 1.0, "content": 1.0, "visual": 1.0})

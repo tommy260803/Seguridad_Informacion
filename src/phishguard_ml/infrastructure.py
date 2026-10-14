@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 from pathlib import Path
 from typing import Any
@@ -7,7 +8,7 @@ from typing import Any
 import numpy as np
 
 
-INFRA_FEATURE_VERSION = "infra-features-1.0.0"
+INFRA_FEATURE_VERSION = "infra-features-2.0.0"
 
 INFRA_FEATURE_NAMES = (
     "infra_observation_available",
@@ -28,6 +29,13 @@ INFRA_FEATURE_NAMES = (
     "infra_final_uses_https",
     "infra_total_dns_ms",
     "infra_total_request_ms",
+    "infra_dns_distinct_slash24_count",
+    "infra_dns_subnet_dispersion_ratio",
+    "infra_fast_flux_probability",
+    "infra_certificate_min_days_remaining",
+    "infra_certificate_min_validity_days",
+    "infra_certificate_self_issued_count",
+    "infra_certificate_max_san_dns_count",
 )
 
 
@@ -37,6 +45,29 @@ class InfrastructureFeatureError(ValueError):
 
 def _zero_features() -> dict[str, float]:
     return {name: 0.0 for name in INFRA_FEATURE_NAMES}
+
+
+def _compute_fast_flux_from_hops(hops: list[dict[str, Any]]) -> tuple[float, float, float]:
+    if not hops or not isinstance(hops[0], dict):
+        return 0.0, 0.0, 0.0
+    resolved = hops[0].get("resolved_addresses") or []
+    ipv4_addrs = []
+    for addr_str in resolved:
+        try:
+            ip = ipaddress.ip_address(addr_str)
+            if ip.version == 4:
+                ipv4_addrs.append(ip)
+        except ValueError:
+            continue
+    if not ipv4_addrs:
+        return 0.0, 0.0, 0.0
+    distinct_slash24 = len({str(ipaddress.ip_network(f"{ip}/24", strict=False)) for ip in ipv4_addrs})
+    dispersion_ratio = distinct_slash24 / len(ipv4_addrs)
+    if len(ipv4_addrs) >= 3 and distinct_slash24 >= 3:
+        fast_flux_prob = min(1.0, 0.50 + 0.15 * (distinct_slash24 - 2))
+    else:
+        fast_flux_prob = 0.0
+    return float(distinct_slash24), float(dispersion_ratio), float(fast_flux_prob)
 
 
 def extract_infrastructure_features(result: dict[str, Any] | None) -> dict[str, float]:
@@ -76,6 +107,13 @@ def extract_infrastructure_features(result: dict[str, Any] | None) -> dict[str, 
         ("final_uses_https", "infra_final_uses_https"),
         ("total_dns_ms", "infra_total_dns_ms"),
         ("total_request_ms", "infra_total_request_ms"),
+        ("dns_distinct_slash24_count", "infra_dns_distinct_slash24_count"),
+        ("dns_subnet_dispersion_ratio", "infra_dns_subnet_dispersion_ratio"),
+        ("fast_flux_probability", "infra_fast_flux_probability"),
+        ("certificate_min_days_remaining", "infra_certificate_min_days_remaining"),
+        ("certificate_min_validity_days", "infra_certificate_min_validity_days"),
+        ("certificate_self_issued_count", "infra_certificate_self_issued_count"),
+        ("certificate_max_san_dns_count", "infra_certificate_max_san_dns_count"),
     ):
         value = raw_features.get(source_name)
         if value is None:
@@ -85,6 +123,18 @@ def extract_infrastructure_features(result: dict[str, Any] | None) -> dict[str, 
         if not np.isfinite(value):
             raise InfrastructureFeatureError(f"Feature {source_name} is not finite")
         features[target_name] = float(value)
+
+    # Backfill fast-flux metrics from real recorded hops if not explicitly stored in raw_features
+    if (
+        status == "success"
+        and "dns_distinct_slash24_count" not in raw_features
+        and isinstance(result.get("hops"), list)
+    ):
+        s24, disp, ff_prob = _compute_fast_flux_from_hops(result["hops"])
+        features["infra_dns_distinct_slash24_count"] = s24
+        features["infra_dns_subnet_dispersion_ratio"] = disp
+        features["infra_fast_flux_probability"] = ff_prob
+
     return features
 
 
@@ -97,6 +147,8 @@ def load_infrastructure_results(path: str | Path) -> dict[str, dict[str, Any]]:
     except OSError as exc:
         raise InfrastructureFeatureError(f"Cannot read infrastructure results: {exc}") from exc
     for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
         try:
             row = json.loads(line)
             sample_id = row["sample_id"]
@@ -109,7 +161,6 @@ def load_infrastructure_results(path: str | Path) -> dict[str, dict[str, Any]]:
             raise InfrastructureFeatureError(f"Duplicate infrastructure result: {sample_id}")
         if not isinstance(result, dict):
             raise InfrastructureFeatureError(f"Result at line {line_number} is not an object")
-        # Validate before exposing the row to downstream model code.
         extract_infrastructure_features(result)
         results[sample_id] = result
     return results

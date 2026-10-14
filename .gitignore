@@ -17,3 +17,10 @@ data/processed/
 data/cache/
 artifacts/
 sandbox/target-url.txt
+
+# Paquete de evidencia distribuible (se entrega como archivo + SHA-256, no en Git)
+evidencia_phishpe_definitiva.zip
+evidencia_phishpe_definitiva.sha256
+# Entregas de evidencia de fases anteriores (binarios pesados; se conservan en disco)
+evidencia_*.zip
+evidencia_*.sha256

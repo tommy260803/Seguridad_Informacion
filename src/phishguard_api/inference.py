@@ -19,11 +19,22 @@ class UnifiedModelManager:
         self.psl = self._load_psl()
         self.m0_model = self._load_model([
             Path("artifacts/url-baseline-0.2.0/model.joblib"),
-            Path("artifacts/url-baseline-0.2.0/conventional/model.joblib")
+            Path("artifacts/m0-real/model.joblib"),
+            Path("artifacts/url-baseline-0.2.0/conventional/model.joblib"),
         ])
-        self.m1_model = self._load_model(Path("artifacts/m1-baseline/model.joblib"))
-        self.m2_model = self._load_model(Path("artifacts/m2-baseline/model.joblib"))
-        self.m3_model = self._load_model(Path("artifacts/m3-baseline/model.joblib"))
+        self.m1_model = self._load_model([
+            Path("artifacts/m1-real/model.joblib"),
+            Path("artifacts/m1-baseline/model.joblib"),
+        ])
+        self.m2_model = self._load_model([
+            Path("artifacts/m2-real/model.joblib"),
+            Path("artifacts/m2-baseline/model.joblib"),
+        ])
+        self.m3_model = self._load_model([
+            Path("artifacts/corrected_audit/m3-authentic-cdp/model.joblib"),
+            Path("artifacts/m3-real/model.joblib"),
+            Path("artifacts/m3-baseline/model.joblib"),
+        ])
         
     def _load_psl(self) -> PublicSuffixList:
         psl_paths = list(Path("data/raw").rglob("public_suffix_list.dat"))

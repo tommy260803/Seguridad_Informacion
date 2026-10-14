@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
+from phishguard_visual.matcher import visual_brand_matcher
 from phishguard_visual.models import VisualEvidence, VisualResult
 
 
@@ -24,9 +25,13 @@ def analyze_screenshot(path: str | Path, *, max_bytes: int = 8_000_000, max_pixe
         "visual_edge_density": 0.0,
         "visual_dark_pixel_ratio": 0.0,
         "visual_saturated_pixel_ratio": 0.0,
+        "visual_brand_detected": 0.0,
+        "visual_brand_similarity": 0.0,
+        "visual_phash_distance_min": 1.0,
+        "visual_hsv_similarity_max": 0.0,
     }
     fallback_evidence = tuple(VisualEvidence(name, value) for name, value in fallback_features.items())
-    
+
     try:
         size = file_path.stat().st_size
     except OSError as exc:
@@ -44,6 +49,7 @@ def analyze_screenshot(path: str | Path, *, max_bytes: int = 8_000_000, max_pixe
     luminance = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
     edge_x = np.abs(np.diff(luminance, axis=1)).mean() if width > 1 else 0.0
     edge_y = np.abs(np.diff(luminance, axis=0)).mean() if height > 1 else 0.0
+    brand_match = visual_brand_matcher.match_image(rgb)
     features = {
         "visual_observation_available": 1.0,
         "visual_width": float(width),
@@ -54,6 +60,10 @@ def analyze_screenshot(path: str | Path, *, max_bytes: int = 8_000_000, max_pixe
         "visual_edge_density": float((edge_x + edge_y) / 2.0),
         "visual_dark_pixel_ratio": float((luminance < 0.2).mean()),
         "visual_saturated_pixel_ratio": float((rgb.max(axis=2) - rgb.min(axis=2) > 0.35).mean()),
+        "visual_brand_detected": float(brand_match["visual_brand_detected"]),
+        "visual_brand_similarity": float(brand_match["visual_brand_similarity"]),
+        "visual_phash_distance_min": float(brand_match["visual_phash_distance_min"]),
+        "visual_hsv_similarity_max": float(brand_match["visual_hsv_similarity_max"]),
     }
     evidence = tuple(VisualEvidence(name, value) for name, value in features.items())
     return VisualResult("success", size, features, evidence)
