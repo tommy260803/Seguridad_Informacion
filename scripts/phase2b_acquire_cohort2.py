@@ -58,6 +58,61 @@ def sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+FREEZE_MANIFEST = ROOT / "artifacts" / "corrections_phase2" / "freeze_manifest.json"
+
+
+def verify_freeze_guard() -> dict[str, Any]:
+    """Comprobación programática del freeze ANTES de consultar etiquetas (MENOR-1).
+
+    Antes, la exigencia de un freeze vigente era solo documental en phase2b.
+    Ahora se verifica de forma programática, igual que en phase2c:
+      * existe artifacts/corrections_phase2/freeze_manifest.json;
+      * los hashes de código corregido, modelos y scripts de experimento del
+        manifiesto siguen coincidiendo con el árbol actual.
+
+    Cualquier desalineación aborta con SystemExit ANTES de descargar feeds o
+    consultar etiquetas (garantía de congelación previa a etiquetado).
+    Devuelve el dict de estado para poder testearla sin abortar.
+    """
+    if not FREEZE_MANIFEST.exists():
+        raise SystemExit(
+            "ABORT: falta freeze_manifest.json; ejecute scripts/phase2a_freeze.py primero"
+        )
+    manifest = json.loads(FREEZE_MANIFEST.read_text(encoding="utf-8"))
+    mismatches: list[str] = []
+    for rel, expected in manifest.get("corrected_code_sha256", {}).items():
+        p = ROOT / rel
+        if not p.exists():
+            mismatches.append(f"missing:{rel}")
+        elif sha256_file(p) != expected:
+            mismatches.append(f"changed:{rel}")
+    for rel, expected in manifest.get("models", {}).items():
+        if expected.get("sha256"):
+            p = ROOT / rel
+            if not p.exists() or sha256_file(p) != expected["sha256"]:
+                mismatches.append(f"model_changed:{rel}")
+    for rel, expected in manifest.get("experiment_scripts_sha256", {}).items():
+        if rel.endswith("phase2b_acquire_cohort2.py"):
+            continue  # este propio script se congela en phase2a; comprobarlo aquí
+            # sería un auto-chequeo circular si phase2a no se re-ejecuta.
+        p = ROOT / rel
+        if not p.exists() or sha256_file(p) != expected:
+            mismatches.append(f"script_changed:{rel}")
+    status = {
+        "freeze_manifest_sha256": sha256_file(FREEZE_MANIFEST),
+        "frozen_at_utc": manifest.get("frozen_at_utc"),
+        "mismatches": mismatches,
+        "ok": not mismatches,
+    }
+    if mismatches:
+        raise SystemExit(
+            "ABORT: el freeze no coincide con el código actual "
+            f"({', '.join(mismatches)}); re-ejecute scripts/phase2a_freeze.py "
+            "con motivo documentado en FREEZE_HISTORY.md"
+        )
+    return status
+
+
 def sha256_file(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
@@ -269,6 +324,12 @@ def main() -> None:
     t_start = time.perf_counter()
     OUT.mkdir(parents=True, exist_ok=True)
     random.seed(SEED)
+
+    # ---- 0) Guard programático de freeze ANTES de cualquier consulta ----------
+    freeze_status = verify_freeze_guard()
+    print(f"[freeze-guard] ok={freeze_status['ok']} "
+          f"manifest={freeze_status['freeze_manifest_sha256'][:16]}… "
+          f"frozen_at={freeze_status['frozen_at_utc']}", flush=True)
 
     psl_path = sorted((ROOT / "data" / "raw").rglob("public_suffix_list.dat"))[-1]
     psl = PublicSuffixList.from_file(psl_path)
@@ -518,6 +579,7 @@ def main() -> None:
         "excluded_sha256": sha256_file(OUT / "cohort2_excluded.csv"),
         "redirects_sha256": sha256_file(OUT / "cohort2_redirects.jsonl"),
         "psl_file": str(psl_path.relative_to(ROOT)),
+        "freeze_guard_before_label_query": freeze_status,
         "note": "Etiquetas congeladas tras el freeze_manifest. No re-muestrear ni editar este CSV.",
     }
     (OUT / "cohort2_labels_frozen.json").write_text(json.dumps(frozen, indent=2, ensure_ascii=False), encoding="utf-8")

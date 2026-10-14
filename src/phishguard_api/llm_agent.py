@@ -151,8 +151,6 @@ async def analyze_with_llm(
         if not groq_key:
             return None, {"provider": "groq", "kind": "not_configured", "message": "GROQ_API_KEY not set"}
         
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         primary_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
         candidate_models = [primary_model]
         if "llama-3.1-8b-instant" not in candidate_models:
@@ -161,7 +159,6 @@ async def analyze_with_llm(
             candidate_models.append("openai/gpt-oss-20b")
 
         last_error = None
-        verify_ssl = True
         for attempt in range(max(attempts, len(candidate_models))):
             active_model = candidate_models[min(attempt, len(candidate_models) - 1)]
             try:
@@ -178,7 +175,6 @@ async def analyze_with_llm(
                         "Content-Type": "application/json",
                     },
                     timeout=timeout,
-                    verify=verify_ssl,
                 )
 
                 if response.status_code == 200:
@@ -205,8 +201,11 @@ async def analyze_with_llm(
                         import time
                         time.sleep(2.5)
             except requests.exceptions.SSLError as ssl_exc:
-                verify_ssl = False
-                last_error = {"provider": "groq", "kind": "ssl_intercepted_retrying", "message": str(ssl_exc)[:256]}
+                # C-3: NUNCA se desactiva la verificación TLS. Un SSLError se trata como
+                # cualquier otro fallo de transporte (se registra y se reintenta con el
+                # siguiente candidato). Desactivar verify expondría la clave del proveedor
+                # a un ataque de intermediario (MITM).
+                last_error = {"provider": "groq", "kind": "ssl_error", "message": str(ssl_exc)[:256]}
             except Exception as exc:
                 last_error = {"provider": "groq", "kind": "timeout_or_invalid_response", "message": str(exc)[:512]}
                 if attempt < attempts - 1:

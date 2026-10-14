@@ -145,11 +145,15 @@ externo**, esperable y reportada.
 
 ## L8. Congelamiento vs. fecha del artículo
 
-**Qué.** El estado congelado vigente es el *freeze* #3
-(`0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41`,
-2026-10-14). El artículo debe citar **esa** fecha de congelación y los hashes
-del manifiesto, no las fechas de los informes históricos (corregidas en
-`REPRODUCIBILIDAD.md` §R1).
+**Qué.** El estado congelado vigente es el *freeze* #5
+(`110a954f7b99eced0bcea66a59700e23f8f6cea34f92db4fa9b4c6ec0fae5f62`,
+2026-10-14), que incorpora únicamente las correcciones de las auditorías finales
+(C‑2, C‑3, B‑07) y los scripts de medición, con modelos, umbrales y snapshots
+baseline **byte-idénticos** a los del freeze #3
+(`0999ef95…`, 2026-10-14), bajo el que se ejecutó la evaluación de la cohorte2
+(prueba en `eval/offline_revalidation.json`, 11/11 PASS). El artículo debe citar
+**el freeze #5 como estado del código y el #3 como fecha de evaluación**, no las
+fechas de los informes históricos (corregidas en `REPRODUCIBILIDAD.md` §R1).
 
 ---
 
@@ -181,7 +185,7 @@ backend real en `:8080` e Internet público. **No** se usó ASGI ni mocks como
 prueba principal.
 
 **Impacto.** El comportamiento medido es el de un Chromium real y actual, pero
-**no** se验证ó el empaquetado `.crx` ni las directivas de empresa del producto
+**no** se verificó el empaquetado `.crx` ni las directivas de empresa del producto
 de consumo. Para despliegue productivo debe empaquetarse la extensión o usar
 directivas de administración.
 
@@ -190,11 +194,71 @@ directivas de administración.
 
 ---
 
+## L11. `extension.pem`: clave de firmado preexistente en el repositorio (revisión de credenciales, B‑09/C‑4)
+
+**Qué.** El barrido de secretos a árbol completo (`scripts/_secret_scan_before_commit.py`,
+condición C‑4) clasifica `extension.pem` como `PREEXISTING_DOCUMENTED`: es la
+**clave privada de firmado de la extensión Chrome**, ya rastreada en git **antes**
+de esta fase (no es un secret introducido por la fase de corrección) y reportada
+en cada barrido, nunca silenciada.
+
+**Por qué no se borró en esta fase.** Eliminarla del árbol (o reescribir la
+historia de git) exige **rotar la clave** y regenerar la firma de la extensión,
+lo que es una operación destructiva que requiere aprobación explícita; hacerlo
+de forma silenciosa rompería la trazabilidad de los commits anteriores.
+
+**Impacto.** Cualquier persona con acceso al repositorio dispone de la clave de
+firmado de la extensión; la extensión distribuida podría firmarse con ella.
+Para una extensión en fase de investigación (no publicada en la Chrome Web
+Store) el riesgo es bajo, pero **no es cero**.
+
+**Recomendación.** (1) Rotar la clave (`extension.pem`) y regenerar la firma
+antes de cualquier publicación; (2) retirarla del historial de git con
+`git filter-repo` + reescritura de remoto, operación que queda **pendiente de
+aprobación**; (3) mantener el secretos-scan obligatorio previo a cada commit
+(documentado en `REPRODUCIBILIDAD.md`).
+
+---
+
+## L12. Dos rutas de producto desactivan o evitan la verificación TLS (preexistentes; fuera del alcance de C‑3)
+
+**Qué.** La condición C‑3 de la auditoría técnica estaba acotada a
+`src/phishguard_api/llm_agent.py` (fallback `verify_ssl = False` ante `SSLError`,
+ya eliminado y cubierto por pruebas de regresión). El barrido de esta fase
+detectó, además, **dos desactivaciones de verificación preexistentes** en el
+código base que **no** se modifican en esta fase para no alterar el
+comportamiento del servicio ya evaluado:
+
+1. `src/phishguard_api/server.py` — la adquisición de contenido usa
+   `requests.get(job.url, verify=False, ...)` con `urllib3.disable_warnings(...)`:
+   se aceptan certificados inválidos al descargar la página a analizar.
+2. `src/phishguard_ml/detection_rules.py` — `_check_server_geolocation` crea un
+   contexto `ssl` con `check_hostname=False` / `CERT_NONE` y consulta la API de
+   geolocalización por **`http://` plano** (el contexto ni siquiera se usa: la
+   URL no es HTTPS).
+
+**Por qué no se corrigió aquí.** Ambas rutas pertenecen a la configuración
+original (commit base `ceb0c9e`); cambiarlas modificaría la adquisición de
+modalidades y la ruta de reglas, con efecto sobre métricas ya congeladas que
+exigiría una re-validación completa. C‑3 se cerró en su alcance literal.
+
+**Impacto.** Riesgo MITM en la descarga de contenido (páginas servidas o
+alteradas por un intermediario) y fuga de la IP/consultas del analizador hacia
+`ip-api.com` sin cifrar. No afecta a los modelos congelados ni a las métricas
+publicadas.
+
+**Recomendación.** Habilitar `verify=True` con manejo explícito de `SSLError`
+(distinto para hosts legítimos con certificados rotos que para phishing),
+migrar la geolocalización a HTTPS con contexto por defecto, y cubrir ambos
+cambios con pruebas de regresión en una fase posterior.
+
+---
+
 ## Resumen de lo que SÍ queda demostrado con evidencia archivada
 
 | Afirmación | Evidencia |
 |---|---|
-| BUG-01…BUG-08 corregidos | `MATRIZ_TRAZABILIDAD_FINAL.csv` (con SHA-256 por archivo) + 174 pruebas, 0 fallos |
+| BUG-01…BUG-08 corregidos | `MATRIZ_TRAZABILIDAD_FINAL.csv` (con SHA-256 por archivo) + 186 pruebas, 0 fallos |
 | El defecto BUG-03 (Punycode) está resuelto sin falsos positivos | `manual_audit_regressions.json` (PASS + controles negativos) |
 | El defecto BUG-04 (umbral de abstención) gobierna la decisión | Barrido 0.01/0.20/0.99 → 119/119/12 abstenciones con `decide_next()` real sobre datos externos |
 | El defecto BUG-07 (`www`) está resuelto | Experimento pareado N = 300: FPR 100 % → 5.33 %, 170/300 → 0/300 discordancias |

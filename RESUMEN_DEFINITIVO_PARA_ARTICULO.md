@@ -1,7 +1,9 @@
 # RESUMEN DEFINITIVO PARA ARTÍCULO — PhishPe (PhishGuard) corregido
 
 **Versión:** 2026‑10‑14 (UTC) · rama `corrections-phase2` · congelación vigente
-`0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41`
+`110a954f7b99eced0bcea66a59700e23f8f6cea34f92db4fa9b4c6ec0fae5f62`
+(freeze #5; la cohorte2 se evaluó bajo el freeze #3 `0999ef95…` y la igualdad de
+métricas entre ambos está demostrada en `eval/offline_revalidation.json`)
 
 > **Nota de retiro de cifras previas.** Este resumen sustituye íntegramente a la
 > versión anterior, que contenía cifras no sustentables («cohorte de 23 URLs»,
@@ -42,8 +44,9 @@
    discrepancias texto‑vs‑CSV, de las fechas erróneas («2026‑04‑12» →
    2026‑10‑12) y retirada de la cifra no sustentable de 105 541 dominios.
 
-6. **174 pruebas automatizadas, 0 fallos** (47 de regresión de defectos), con
-   XML de junit archivado.
+6. **186 pruebas automatizadas, 0 fallos** (47 de regresión de defectos y 12 de
+   regresión de las condiciones de las auditorías finales), con XML de junit
+   archivado y certificado en `VALIDACION_FINAL_AUTOMATICA.json` (T‑01).
 
 ---
 

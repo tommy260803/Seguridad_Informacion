@@ -187,6 +187,34 @@ Umbrales y política globales congelados (misma fuente):
 
 ---
 
+## R8. Barrido de secretos y determinismo de marcas de tiempo
+
+**Barrido de secretos a árbol completo (condición C‑4).** Antes de cada commit
+de esta fase se ejecuta:
+
+```powershell
+python scripts\_secret_scan_before_commit.py   # exit 0 obligatorio
+```
+
+Recorre `git ls-files` **más** los no rastreados no ignorados (~316 ficheros),
+con 9 patrones de credenciales. Resultado actual: **0 secretos sin documentar**.
+Dos hallazgos quedan clasificados y **nunca silenciados**:
+
+- `extension.pem` → `PREEXISTING_DOCUMENTED` (clave de firmado de la extensión
+  preexistente al histórico; ver limitación **L11** con el plan de rotación).
+- La clave pública de Firebase `AIzaSy…` dentro de la URL de un dataset en
+  `01_AUDITORIA_BASELINE.md` → `ALLOWLIST_BY_PATH` (parámetro OAuth público
+  documentado como hallazgo, no una credencial del proyecto).
+
+**Determinismo de marcas de tiempo (condición MENOR‑3).** Los generadores
+`phase2h_build_deliverables.py` y `phase2k_summarize_e2e.py` aceptan la variable
+estándar `SOURCE_DATE_EPOCH`: si se define, la marca `generated_utc` /
+«Generado:» se fija a ese instante y la regeneración queda **byte-idéntica**;
+si no, se usa el UTC actual (único campo no determinista de esos artefactos,
+acotado y documentado).
+
+---
+
 ## Orden del protocolo y congelaciones
 
 El orden respetado fue: **congelar** (código, modelos, umbrales, snapshots del
@@ -194,15 +222,25 @@ commit base) → **construir la cohorte2 consultando etiquetas** → **evaluar**
 Hay tres congelaciones documentadas en
 `artifacts/corrections_phase2/FREEZE_HISTORY.md`, con el motivo y el hash de
 cada una. Ninguna re-congelación alteró modelos ni umbrales: la #2 corrigió un
-defecto del **script de medición** y la #3 el **BUG-08** (falsos positivos de
-Levenshtein) detectado al auditar los propios resultados de la #2.
+defecto del **script de medición**, la #3 el **BUG-08** (falsos positivos de
+Levenshtein) detectado al auditar los propios resultados de la #2, y la #4/#5
+las **correcciones de las dos auditorías finales** (C‑2 homógrafos, C‑3 TLS,
+B‑07 comentario), con `models`, `thresholds_and_normalization` y
+`baseline_original_config_A_B` byte-idénticos entre #3 y #5 (ver
+`eval/offline_revalidation.json → freeze_invariants_vs_prev`).
 
-**Verificación de la congelación vigente:**
+**Verificación de la congelación vigente (offline, sin red):**
 
 ```powershell
-python scripts\phase2c_evaluate_cohort2.py   # aborta si algo difiere del manifiesto
-# → artefactos/.../eval/eval_summary.json → freeze.ok = true, mismatches = []
+python scripts\phase2n_revalidate_offline.py   # verify_freeze() + reproducción byte a byte
+# → artifacts/corrections_phase2/eval/offline_revalidation.json → "dictamen": "PASS" (11/11)
 ```
+
+> **No** re-ejecute `phase2c_evaluate_cohort2.py` para verificar el freeze: su
+> bloque B/C sondea 600 URLs en vivo y regeneraría `probe_*` con deriva de red.
+> El registro histórico de esa corrida (bajo freeze #3) se conserva intacto en
+> `eval/`, y `phase2n` prueba que los bloques offline (A, D, E) reproducen
+> exactamente esos artefactos bajo el freeze #5 vigente.
 
 ---
 

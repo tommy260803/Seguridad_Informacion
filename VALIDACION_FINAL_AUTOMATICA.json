@@ -1,30 +1,33 @@
 {
-  "generated_utc": "2026-10-14T16:05:53.190148+00:00",
+  "generated_utc": "2026-10-14T18:49:44.673467+00:00",
   "protocol": "congelar -> construir cohorte (etiquetas) -> evaluar (ver artifacts/corrections_phase2/FREEZE_HISTORY.md)",
   "freeze": {
-    "manifest_sha256": null,
-    "frozen_at_utc": "2026-10-14T04:12:59.503358+00:00",
-    "git_commit": null,
-    "dirty": null
+    "manifest_sha256": "110a954f7b99eced0bcea66a59700e23f8f6cea34f92db4fa9b4c6ec0fae5f62",
+    "frozen_at_utc": "2026-10-14T18:32:10.624784+00:00",
+    "git_commit": "96944d4632cbefdae5b0341d72165fa1e96cbc07",
+    "dirty": true,
+    "git_base_commit_original": "ceb0c9e62ab861ce993bd3a1ec636d4d4b3405b7",
+    "eval_freeze_manifest_sha256": "0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41",
+    "eval_freeze_note": "eval_freeze_manifest_sha256 es el freeze bajo el que se corrio la evaluacion (registro historico en eval_summary.json); manifest_sha256 es el manifiesto vigente. La igualdad de metricas entre ambos se prueba en offline_revalidation.json (T-13)."
   },
-  "n_checks": 12,
-  "n_pass": 12,
+  "n_checks": 14,
+  "n_pass": 14,
   "n_fail": 0,
   "dictamen": "PASS",
   "checks": [
     {
       "id": "T-01",
-      "descripcion": "Suite completa de pruebas sin fallos (incluye 32+15 nuevas pruebas de regresion)",
+      "descripcion": "Suite completa de pruebas sin fallos (BUG-01..08 + regresiones de condiciones de auditoria C-2/C-3/C-4/C-5/MENOR-1)",
       "resultado": "PASS",
-      "valor_observado": "tests=174 failures=0 errors=0 skipped=0",
+      "valor_observado": "tests=186 failures=0 errors=0 skipped=0",
       "evidencia": "artifacts/corrections_phase2/junit_full_suite.xml"
     },
     {
       "id": "T-02",
       "descripcion": "Congelacion verificada al inicio de la evaluacion (codigo, modelos, umbrales)",
       "resultado": "PASS",
-      "valor_observado": "ok=True mismatches=[]",
-      "evidencia": "artifacts/corrections_phase2/freeze_manifest.json"
+      "valor_observado": "ok=True mismatches=[] eval_freeze=0999ef95922262a6… (registro historico en eval_summary.json; manifiesto vigente actual en el bloque freeze)",
+      "evidencia": "artifacts/corrections_phase2/eval/eval_summary.json"
     },
     {
       "id": "T-03",
@@ -79,7 +82,7 @@
       "id": "T-10",
       "descripcion": "Las 14 filas del CSV de pruebas pareadas historico se recomputan exactamente",
       "resultado": "PASS",
-      "valor_observado": "match=14/14 dictamen=PASS: todas las filas del CSV publicado son reproducibles desde los predictions.csv congelados",
+      "valor_observado": "match=14/14 dictamen=PASS: todas las filas del CSV publicado son reproducibles desde los predictions.csv congelados y las 14 filas de las tablas del informe 07 coinciden con el CSV canónico",
       "evidencia": "artifacts/corrections_phase2/eval/historical_stats_reconciliation.json"
     },
     {
@@ -95,16 +98,30 @@
       "resultado": "PASS",
       "valor_observado": "E2E_CHROME_RESULTS.md",
       "evidencia": "artifacts/e2e_chrome/"
+    },
+    {
+      "id": "T-13",
+      "descripcion": "Revalidacion OFFLINE bajo el freeze vigente reproduce las metricas congeladas (verify_freeze + bloques A/D/E byte-identicos)",
+      "resultado": "PASS",
+      "valor_observado": "11/11 checks (PASS)",
+      "evidencia": "artifacts/corrections_phase2/eval/offline_revalidation.json"
+    },
+    {
+      "id": "T-14",
+      "descripcion": "C-2 (homografos) medida sobre la cohorte2: 0 disparadores de FP, 0 diffs baseline-vs-corregido",
+      "resultado": "PASS",
+      "valor_observado": "disparadores=0, diffs=0, N=1200/1200",
+      "evidencia": "artifacts/corrections_phase2/eval/bug03_c2_fix_impact_on_cohort2.json"
     }
   ],
   "defect_fix_records": [
     {
       "ID": "BUG-01",
-      "Defecto": "Timeout de cliente 4000 ms aborta paginas legitimas lentas",
+      "Defecto": "Timeout de cliente 6000 ms aborta paginas legitimas lentas",
       "Correccion": "Presupuesto de cliente a 8000 ms",
       "Prueba_regresion": "TestBug01TimeoutBudget (3 pruebas, servidor lento de 6 s)",
       "Evidencia_archivo": "tests/test_corrections_phase2.py",
-      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Evidencia_SHA256": "b193bbd48c3e45e258838772becbd0d25c9e7a603c9500852545b830af4a2892",
       "Metrica_clave": "0 timeouts falsos en escenarios lentos",
       "Estado": "CORREGIDO"
     },
@@ -114,7 +131,7 @@
       "Correccion": "socket.getaddrinfo movido a asyncio.to_thread",
       "Prueba_regresion": "TestBug02AsyncDns (4 pruebas, incl. vivacidad del bucle con getaddrinfo +3 s)",
       "Evidencia_archivo": "tests/test_corrections_phase2.py",
-      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Evidencia_SHA256": "b193bbd48c3e45e258838772becbd0d25c9e7a603c9500852545b830af4a2892",
       "Metrica_clave": "bucle de eventos responde durante resolucion DNS",
       "Estado": "CORREGIDO"
     },
@@ -144,7 +161,7 @@
       "Correccion": "force_visual eliminado; modalidad no disponible se marca consultada (fallback)",
       "Prueba_regresion": "TestBug05NoForcedVisualStage (2 pruebas) + cascade run externo",
       "Evidencia_archivo": "tests/test_corrections_phase2.py",
-      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Evidencia_SHA256": "b193bbd48c3e45e258838772becbd0d25c9e7a603c9500852545b830af4a2892",
       "Metrica_clave": "0 casos 'no_available_modality' silenciosos; motivos de decision: {\"evidence_sufficient\": 481, \"budget_exhausted_or_no_evidence\": 119}",
       "Estado": "CORREGIDO"
     },
@@ -154,7 +171,7 @@
       "Correccion": "Mezcla explicita 0.7*p_cascada + 0.3*p_LLM",
       "Prueba_regresion": "TestBug06LlmBlend (3 pruebas)",
       "Evidencia_archivo": "tests/test_corrections_phase2.py",
-      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Evidencia_SHA256": "b193bbd48c3e45e258838772becbd0d25c9e7a603c9500852545b830af4a2892",
       "Metrica_clave": "combinacion lineal verificada; evaluacion con LLM de pago NO autorizada (limitacion)",
       "Estado": "CORREGIDO (codigo)"
     },
@@ -174,7 +191,7 @@
       "Correccion": "Asignacion previous_row=current_row devuelta al interior del bucle externo + comentario",
       "Prueba_regresion": "TestBug08LevenshteinDp (15 pruebas contra implementacion de referencia)",
       "Evidencia_archivo": "tests/test_corrections_phase2.py",
-      "Evidencia_SHA256": "6b10be01afb9996fd9eb2f07ff0b009200e2514c94021b8e2fa17bc466f6ee18",
+      "Evidencia_SHA256": "b193bbd48c3e45e258838772becbd0d25c9e7a603c9500852545b830af4a2892",
       "Metrica_clave": "lev('t','microsoft') 0->8; t.ly/t.is/s.id dejan de marcar suplantacion de marca",
       "Estado": "CORREGIDO"
     }

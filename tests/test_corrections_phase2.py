@@ -135,11 +135,27 @@ class TestBug03HomoglyphPunycode:
             ("muenchen.de", "muenchen.de"),
             ("portal.espol.edu.ec", "espol.edu.ec"),
             ("xn--mnchen-3ya.de", "mnchen-3ya.de"),  # IDN legit city domain, no brand clash
+            # C-2: subdominio punycode bajo el dominio oficial real de una marca NO es
+            # suplantación (falso positivo demostrado por la auditoría técnica final).
+            ("xn--caf-dma.apple.com", "apple.com"),
+            ("xn--caf-dma.google.com", "google.com"),
+            ("www.xn--caf-dma.netflix.com", "netflix.com"),
         ],
     )
     def test_no_unjustified_false_positives(self, host: str, registered: str) -> None:
         result = self._analyze(host, registered)
         assert result["is_spoofing"] is False, f"false positive for {host}"
+
+    def test_c2_punycode_subdomain_of_real_brand_is_not_spoofing(self) -> None:
+        """C-2: la heurística punycode solo aplica al DOMINIO REGISTRADO, nunca a un
+        subdominio IDN legítimo bajo el dominio oficial real de la marca."""
+        result = self._analyze("xn--caf-dma.apple.com", "apple.com")
+        assert result["is_spoofing"] is False
+
+    def test_c2_real_punycode_registered_domain_attack_still_detected(self) -> None:
+        """C-2 preserva la detección de un dominio registrable xn-- que suplanta a una marca."""
+        result = self._analyze("xn--pple-43d.com", "xn--pple-43d.com")
+        assert result["is_spoofing"] is True
 
     def test_latin_lookalike_typosquat_still_detected(self) -> None:
         result = self._analyze("www.paypa1.com", "paypa1.com")
@@ -333,3 +349,84 @@ class TestBug08LevenshteinDp:
                           ("is.gd", "is.gd"), ("ow.ly", "ow.ly")]:
             result = analyze_homoglyphs(host, reg)
             assert result["is_spoofing"] is False, f"falso positivo de homógrafo en {host}"
+
+
+# --------------------------------------------------------------------------
+# C-3: la política de TLS nunca debe desactivar la verificación de certificados
+# --------------------------------------------------------------------------
+class TestC3TlsNeverDisabled:
+    def test_no_verify_ssl_false_anywhere_in_source(self) -> None:
+        """El fallback `verify_ssl=False` (C-3) quedó eliminado de todo el código."""
+        hits = []
+        for p in (ROOT / "src").rglob("*.py"):
+            if "verify_ssl" in p.read_text(encoding="utf-8", errors="ignore"):
+                hits.append(str(p.relative_to(ROOT)))
+        assert hits == [], f"verify_ssl aún presente en: {hits}"
+
+    def test_ssl_error_is_recorded_and_retried_without_disabling_tls(self) -> None:
+        source = (ROOT / "src" / "phishguard_api" / "llm_agent.py").read_text(encoding="utf-8")
+        assert '"kind": "ssl_error"' in source
+        assert "urllib3.disable_warnings" not in source
+        assert "CERT_NONE" not in source
+
+
+# --------------------------------------------------------------------------
+# C-4: barrido de secretos a árbol completo con revisión de extension.pem
+# --------------------------------------------------------------------------
+class TestC4SecretScanFullTree:
+    def test_scan_covers_tracked_tree_and_flags_pem(self) -> None:
+        source = (ROOT / "scripts" / "_secret_scan_before_commit.py").read_text(encoding="utf-8")
+        assert '"git", "ls-files"' in source, "el escáner debe recorrer git ls-files (árbol completo)"
+        assert "--others" in source, "debe cubrir también archivos no rastreados no ignorados"
+        assert "extension.pem" in source, "extension.pem debe estar en la revisión de credenciales (B-09)"
+
+
+# --------------------------------------------------------------------------
+# C-5: el paquete de evidencia incluye los scripts E2E y los informes completos
+# --------------------------------------------------------------------------
+class TestC5EvidencePackIncludesE2e:
+    def test_include_list_has_e2e_and_summarizer(self) -> None:
+        source = (ROOT / "scripts" / "phase2j_pack_evidence.py").read_text(encoding="utf-8")
+        for rel in ("scripts/e2e_chrome_phase2.py", "scripts/phase2k_summarize_e2e.py",
+                    "scripts/phase2l_measure_c2_impact.py", "scripts/phase2m_regenerate_07_rows.py"):
+            assert rel in source, f"{rel} debe incluirse en el ZIP de evidencia"
+
+
+# --------------------------------------------------------------------------
+# C-1 + MENOR-1/MENOR-2: bloque freeze de los entregables y guard de phase2b
+# --------------------------------------------------------------------------
+class TestAuditConditionsProgrammatic:
+    def test_phase2h_freeze_block_uses_real_manifest_keys(self) -> None:
+        """C-1: el bloque `freeze` de VALIDACION se llena con claves reales del manifiesto
+        (sha256_file + git.commit + git.working_tree_dirty), no con `freeze: null`."""
+        source = (ROOT / "scripts" / "phase2h_build_deliverables.py").read_text(encoding="utf-8")
+        assert 'sha256_file(CP2 / "freeze_manifest.json")' in source
+        assert '"git_commit": (freeze.get("git") or {}).get("commit")' in source.replace("'", '"')
+        # B-02: el tiempo base declarado en phase2h debe ser 6000 ms, no 4000
+        assert "4000" not in source, "phase2h aún declara un base de 4000 ms (B-02)"
+
+    def test_phase2b_has_programmatic_freeze_guard(self) -> None:
+        """MENOR-1: phase2b verifica el freeze de forma programática antes de etiquetar."""
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "phase2b_mod", ROOT / "scripts" / "phase2b_acquire_cohort2.py")
+        mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(mod)
+        assert hasattr(mod, "verify_freeze_guard"), "phase2b debe exponer verify_freeze_guard"
+        source = (ROOT / "scripts" / "phase2b_acquire_cohort2.py").read_text(encoding="utf-8")
+        assert "verify_freeze_guard()" in source.split("def main()")[1], \
+            "main() debe invocar el guard antes de consultar etiquetas"
+
+    def test_phase2b_freeze_guard_aborts_on_missing_manifest(self, monkeypatch, tmp_path) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "phase2b_mod2", ROOT / "scripts" / "phase2b_acquire_cohort2.py")
+        mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(mod)
+        monkeypatch.setattr(mod, "FREEZE_MANIFEST", tmp_path / "no_such_manifest.json")
+        with pytest.raises(SystemExit):
+            mod.verify_freeze_guard()

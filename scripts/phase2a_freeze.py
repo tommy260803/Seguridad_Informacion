@@ -71,6 +71,18 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "baseline_original").mkdir(exist_ok=True)
 
+    # 0) Preservación: archivar el manifiesto vigente ANTES de sobrescribirlo
+    #    (los freezes #1 y #2 se perdieron por sobrescritura — hallazgo B-05;
+    #    a partir de este punto cada manifiesto queda archivado junto a
+    #    FREEZE_HISTORY.md como freeze_manifest_00N_<sha8>.json).
+    out_path = OUT / "freeze_manifest.json"
+    if out_path.exists():
+        prev_sha = sha256_file(out_path)
+        archive = OUT / f"freeze_manifest_prev_{prev_sha[:8]}.json"
+        if not archive.exists():
+            archive.write_bytes(out_path.read_bytes())
+            print(f"  manifiesto anterior preservado -> {archive.name}")
+
     # 1) Copia inmutable de la Configuración original (commit base)
     baseline_hashes: dict[str, str] = {}
     for rel in BASELINE_FILES:

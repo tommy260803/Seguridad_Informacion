@@ -15,6 +15,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,7 +25,11 @@ CP2 = ROOT / "artifacts" / "corrections_phase2"
 EVAL = CP2 / "eval"
 sys.path.insert(0, str(ROOT / "src"))
 
-NOW = datetime.now(timezone.utc).isoformat()
+NOW = (
+    datetime.fromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]), tz=timezone.utc).isoformat()
+    if os.environ.get("SOURCE_DATE_EPOCH")
+    else datetime.now(timezone.utc).isoformat()
+)
 
 
 def load(name: str) -> dict:
@@ -173,9 +178,9 @@ if sweep:
         "Ejercitado con decide_next() REAL sobre datos externos: el umbral final gobierna de verdad la decision (antes el motor ignoraba abstention_threshold y devolvia la misma decision con cualquier valor). assertion_threshold_has_effect=true.")
 
 # (f) BUG-01/02/05/06: verificados por pruebas (sin efecto metrico medible offline)
-add("Cliente/orquestador", "BUG-01: timeout de cliente 4000->8000 ms",
+add("Cliente/orquestador", "BUG-01: timeout de cliente 6000->8000 ms",
     "E2E Chrome + pruebas", "",
-    "timeout_ms", 4000, 8000,
+    "timeout_ms", 6000, 8000,
     "SI (pruebas, no metrica de cohortes)",
     "tests/test_corrections_phase2.py::TestBug01TimeoutBudget",
     "Presupuesto de cliente corregido a 8000 ms. Verificado con 3 pruebas de regresion (incluida un servidor HTTP que tarda 6 s en responder) + escenarios E2E en Chrome real (timeout y offline).")
@@ -278,7 +283,7 @@ def mrow(bug, defecto, fix, prueba, evidencia_path, metrica, estado):
     })
 
 
-mrow("BUG-01", "Timeout de cliente 4000 ms aborta paginas legitimas lentas",
+mrow("BUG-01", "Timeout de cliente 6000 ms aborta paginas legitimas lentas",
      "Presupuesto de cliente a 8000 ms",
      "TestBug01TimeoutBudget (3 pruebas, servidor lento de 6 s)",
      "tests/test_corrections_phase2.py", "0 timeouts falsos en escenarios lentos", "CORREGIDO")
@@ -350,14 +355,16 @@ def check(cid, desc, expr_ok, valor, evidencia):
     return expr_ok
 
 
-ok_tests = check("T-01", "Suite completa de pruebas sin fallos (incluye 32+15 nuevas pruebas de regresion)",
+ok_tests = check("T-01", "Suite completa de pruebas sin fallos (BUG-01..08 + regresiones de condiciones de auditoria C-2/C-3/C-4/C-5/MENOR-1)",
                  junit_stats["failures"] == 0 and junit_stats["errors"] == 0 and junit_stats["tests"] > 0,
                  f"tests={junit_stats['tests']} failures={junit_stats['failures']} errors={junit_stats['errors']} skipped={junit_stats['skipped']}",
                  "artifacts/corrections_phase2/junit_full_suite.xml")
 ok_freeze = check("T-02", "Congelacion verificada al inicio de la evaluacion (codigo, modelos, umbrales)",
                   summary["freeze"]["ok"] is True and summary["freeze"]["mismatches"] == [],
-                  f"ok={summary['freeze']['ok']} mismatches={summary['freeze']['mismatches']}",
-                  "artifacts/corrections_phase2/freeze_manifest.json")
+                  f"ok={summary['freeze']['ok']} mismatches={summary['freeze']['mismatches']} "
+                  f"eval_freeze={str(summary['freeze'].get('freeze_manifest_sha256'))[:16]}… "
+                  f"(registro historico en eval_summary.json; manifiesto vigente actual en el bloque freeze)",
+                  "artifacts/corrections_phase2/eval/eval_summary.json")
 ok_b03 = check("T-03", "BUG-03: xn--pple-43d.com detectado como suplantacion (caso exacto de la auditoria)",
                manual["bug03_punycode"]["PASS"] is True,
                f"is_spoofing={manual['bug03_punycode']['is_spoofing']}",
@@ -410,13 +417,39 @@ ok_chrome = check("T-12", "E2E en Chrome REAL ejecutado (no ASGI/mocks como prue
                   "E2E_CHROME_RESULTS.md" if (ROOT / "E2E_CHROME_RESULTS.md").exists() else "PENDIENTE",
                   "artifacts/e2e_chrome/")
 
+reval_path = EVAL / "offline_revalidation.json"
+reval = json.loads(reval_path.read_text(encoding="utf-8")) if reval_path.exists() else {}
+ok_reval = check("T-13", "Revalidacion OFFLINE bajo el freeze vigente reproduce las metricas congeladas (verify_freeze + bloques A/D/E byte-identicos)",
+                 reval.get("dictamen") == "PASS" and reval.get("n_fail") == 0,
+                 f"{reval.get('n_pass', 0)}/{reval.get('n_checks', 0)} checks "
+                 f"({reval.get('dictamen', 'NO EJECUTADO')})",
+                 "artifacts/corrections_phase2/eval/offline_revalidation.json")
+
+c2_path = EVAL / "bug03_c2_fix_impact_on_cohort2.json"
+c2 = json.loads(c2_path.read_text(encoding="utf-8")) if c2_path.exists() else {}
+ok_c2 = check("T-14", "C-2 (homografos) medida sobre la cohorte2: 0 disparadores de FP, 0 diffs baseline-vs-corregido",
+              c2.get("n_disparadores_FP_xn--_mas_dominio_marca") == 0 and
+              c2.get("n_baseline_vs_current_is_spoofing_diff") == 0 and
+              c2.get("n_rows") == 1200,
+              f"disparadores={c2.get('n_disparadores_FP_xn--_mas_dominio_marca')}, "
+              f"diffs={c2.get('n_baseline_vs_current_is_spoofing_diff')}, "
+              f"N={c2.get('n_rows', 0)}/1200",
+              "artifacts/corrections_phase2/eval/bug03_c2_fix_impact_on_cohort2.json")
+
 n_pass = sum(1 for c in checks if c["resultado"] == "PASS")
 payload = {
     "generated_utc": NOW,
     "protocol": "congelar -> construir cohorte (etiquetas) -> evaluar (ver artifacts/corrections_phase2/FREEZE_HISTORY.md)",
-    "freeze": {"manifest_sha256": freeze["manifest_sha256"] if "manifest_sha256" in freeze else None,
+    "freeze": {"manifest_sha256": sha256_file(CP2 / "freeze_manifest.json"),
                "frozen_at_utc": freeze.get("frozen_at_utc"),
-               "git_commit": freeze.get("git_commit"), "dirty": freeze.get("git_dirty")},
+               "git_commit": (freeze.get("git") or {}).get("commit"),
+               "dirty": (freeze.get("git") or {}).get("working_tree_dirty"),
+               "git_base_commit_original": (freeze.get("git") or {}).get("base_commit_original"),
+               "eval_freeze_manifest_sha256": (summary.get("freeze") or {}).get("freeze_manifest_sha256"),
+               "eval_freeze_note": "eval_freeze_manifest_sha256 es el freeze bajo el que se corrio la "
+                                   "evaluacion (registro historico en eval_summary.json); manifest_sha256 "
+                                   "es el manifiesto vigente. La igualdad de metricas entre ambos se "
+                                   "prueba en offline_revalidation.json (T-13)."},
     "n_checks": len(checks),
     "n_pass": n_pass,
     "n_fail": len(checks) - n_pass,

@@ -38,6 +38,13 @@ INCLUDE_FILES = [
     "02_VALIDACION_EXTERNA.md",
     "03_EXTENSION_REAL.md",
     "05_CASCADA_ABLACIONES.md",
+    "01_AUDITORIA_BASELINE.md",
+    "04_COMPARACION_CIENTIFICA.md",
+    "06_VISUAL_Y_LLM.md",
+    "INDEX_EVIDENCIA.md",
+    # auditorias finales independientes (condiciones C-1..C-5 / MAYOR / MENOR)
+    "AUDITORIA_CIENTIFICA_FINAL.md",
+    "AUDITORIA_TECNICA_FINAL.md",
     # pruebas
     "tests/test_corrections_phase2.py",
     # scripts del protocolo
@@ -50,11 +57,19 @@ INCLUDE_FILES = [
     "scripts/phase2h_build_deliverables.py",
     "scripts/phase2i_bug03_effect.py",
     "scripts/phase2j_pack_evidence.py",
+    "scripts/phase2k_summarize_e2e.py",
+    "scripts/phase2l_measure_c2_impact.py",
+    "scripts/phase2m_regenerate_07_rows.py",
+    "scripts/phase2n_revalidate_offline.py",
+    "scripts/e2e_chrome_phase2.py",
+    "scripts/_secret_scan_before_commit.py",
+    "scripts/_verify_c2_fix.py",
     # dependencias
     "requirements-lock.txt",
     "pyproject.toml",
     # E2E Chrome
     "E2E_CHROME_RESULTS.md",
+    "CHROME_E2E_TEST_PLAN.md",
 ]
 
 INCLUDE_DIRS = [

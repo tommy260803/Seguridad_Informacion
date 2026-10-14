@@ -1,6 +1,6 @@
 # RESULTADOS E2E EN CHROME REAL — PhishPe
 
-**Generado:** 2026-10-14T16:05:42.991977+00:00 · **fuente única de cifras:** `artifacts/e2e_chrome/summary.json` y `requests.jsonl` (este documento lo genera `scripts/phase2k_summarize_e2e.py`; ninguna cifra está escrita a mano).
+**Generado:** 2026-10-14T18:35:10.515378+00:00 · **fuente única de cifras:** `artifacts/e2e_chrome/summary.json` y `requests.jsonl` (este documento lo genera `scripts/phase2k_summarize_e2e.py`; ninguna cifra está escrita a mano).
 
 ## 1. Proveniencia del navegador y del entorno (verificable)
 

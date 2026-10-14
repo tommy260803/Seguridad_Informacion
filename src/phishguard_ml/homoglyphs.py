@@ -133,34 +133,42 @@ def analyze_homoglyphs(display_host: str, registered_domain: str = "") -> Dict[s
     Returns dict with key 'is_spoofing' as primary key for compatibility with
     HybridM0Model and extension background.js. Implements proper IDN/Punycode
     decoding to prevent evasion via xn-- labels without generating false positives.
-    
-    The fix for the original bug (xn--pple-43d not being detected) includes a
-    heuristic: if the display host contains xn-- Punycode labels and the
-    registered domain is a known brand, flag as potential spoofing since xn--
-    labels are strongly associated with IDN homoglyph attacks.
-    
-    HEURISTIC: If the display host contains xn-- Punycode labels and the
-    registered domain is a known brand, flag as potential spoofing since xn--
-    labels are strongly associated with IDN homoglyph attacks.
+
+    Deteccion en dos capas:
+      1. Regla principal: esqueleto visual del host completo (con etiquetas xn--
+         decodificada una a una) contra marcas objetivo; ataca `xn--pple-43d.com`.
+      2. Heuristica auxiliar (C-2, acotada): solo senala cuando la etiqueta xn--
+         esta en el DOMINIO REGISTRADO (no en un subdominio) y el dominio
+         registrado no es ya el dominio oficial de la marca. Un subdominio punycode
+         bajo el dominio oficial real (xn--caf-dma.apple.com) NO es suplantacion.
     """
     # Decode Punycode first, then compute visual skeleton
     decoded_host = punycode_to_unicode(display_host)
     skeleton = to_visual_skeleton(display_host)
     has_confusables = any(c in CONFUSABLES_MAP for c in decoded_host.lower())
 
-    # HEURISTIC: If the display host contains xn-- Punycode labels, this is
-    # strongly associated with IDN homoglyph attacks. Flag as potential spoofing
-    # when the registered domain is a known brand but doesn't match the xn-- domain.
-    has_punycode_labels = any(label.lower().startswith("xn--") 
-                              for label in display_host.split("."))
+    # HEURISTIC (C-2, acotada tras hallazgo de la auditoria tecnica final): solo
+    # senalar suplantacion por punycode cuando la propia etiqueta xn-- esta en el
+    # DOMINIO REGISTRADO (no en un subdominio) y el dominio registrado NO es ya el
+    # dominio oficial de la marca. Un subdominio punycode bajo el dominio oficial
+    # real (p. ej. xn--caf-dma.apple.com con registrado apple.com) pertenece al
+    # titular de la marca y NO es suplantacion. El caso de ataque real
+    # (xn--pple-43d.com) ya lo detecta la regla principal por distancia de
+    # esqueleto visual, con lo que la heuristica deja de generar ese falso positivo.
+    registered_labels = registered_domain.lower().rstrip(".").split(".")
+    registered_has_punycode = any(label.startswith("xn--") for label in registered_labels)
     is_known_brand_registered = punycode_to_unicode(registered_domain).lower().rstrip(".") in {
         "apple.com", "microsoft.com", "google.com", "paypal.com",
         "facebook.com", "amazon.com", "netflix.com", "instagram.com"
     }
+    # el dominio registrado, en su forma cruda (sin decodificar), no debe ser ya el oficial
+    registered_is_official_brand = registered_domain.lower().rstrip(".") in {
+        "apple.com", "microsoft.com", "google.com", "paypal.com",
+        "facebook.com", "amazon.com", "netflix.com", "instagram.com"
+    }
     
-    if has_punycode_labels and is_known_brand_registered:
-        # xn-- domain claiming to be a known brand - high risk of homoglyph attack
-        # Since we cannot fully decode Punycode in all environments, treat as suspicious
+    if registered_has_punycode and is_known_brand_registered and not registered_is_official_brand:
+        # xn-- en el dominio registrado apuntando a una marca conocida - riesgo de homoglifo
         has_confusables = True  # Ensure confusable flag is set
     
     best_brand = "none"
@@ -185,9 +193,10 @@ def analyze_homoglyphs(display_host: str, registered_domain: str = "") -> Dict[s
         if decoded_registered != official_domain:
             is_spoofing = True
     
-    # Additional: if xn-- labels present with known brand registered, spoofing
-    if has_punycode_labels and is_known_brand_registered and not is_spoofing:
-        # Heuristic: xn-- domain claiming to be a known brand without proper match
+    # Additional (C-2 acotada): senalar solo si el punycode esta en el DOMINIO
+    # REGISTRADO apuntando a una marca y el dominio registrado no es ya el oficial.
+    if registered_has_punycode and is_known_brand_registered and not registered_is_official_brand and not is_spoofing:
+        # Heuristic: xn-- registrable domain impersonating a known brand without proper match
         is_spoofing = True
     
     return {

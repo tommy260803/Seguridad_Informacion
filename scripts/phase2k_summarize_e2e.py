@@ -9,6 +9,7 @@ una simulación.
 from __future__ import annotations
 
 import json
+import os
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -113,7 +114,9 @@ w = L.append
 
 w("# RESULTADOS E2E EN CHROME REAL — PhishPe")
 w("")
-w(f"**Generado:** {datetime.now(timezone.utc).isoformat()} · "
+w(f"**Generado:** "
+  f"{(datetime.fromtimestamp(int(os.environ['SOURCE_DATE_EPOCH']), tz=timezone.utc).isoformat()
+     if os.environ.get('SOURCE_DATE_EPOCH') else datetime.now(timezone.utc).isoformat())} · "
   f"**fuente única de cifras:** `artifacts/e2e_chrome/summary.json` y `requests.jsonl` "
   f"(este documento lo genera `scripts/phase2k_summarize_e2e.py`; ninguna cifra está escrita a mano).")
 w("")

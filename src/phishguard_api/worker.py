@@ -234,8 +234,11 @@ async def process_job(session: AsyncSession, job: Job):
                     # En su lugar, combinar probabilidad LLM con la probabilidad acumulada de la cascada
                     # usando un promedio ponderado basado en la incertidumbre reportada.
                     if llm_prob is not None:
-                        # Promedio ponderado: 70% probabilidad cascada + 30% probabilidad LLM
-                        # La incertidumbre del LLM ajusta el peso
+                        # BUG-06 FIX: mezcla de probabilidad con peso FIJO (no condicional a la
+                        # incertidumbre). 70% probabilidad de la cascada + 30% probabilidad LLM.
+                        # La incertidumbre reportada por el LLM se calcula y se registra a continuación
+                        # para trazabilidad, pero NO altera el peso de la mezcla (B-07: el comentario
+                        # previo afirmaba lo contrario; el código fuente de la fase acuerda 0.7/0.3).
                         uncertainty_weight = min(1.0, max(0.0, 1.0 - float(llm_uncertainty)))
                         probability = 0.7 * probability + 0.3 * float(llm_prob)
                         print(f"Probabilidad combinada (cascada+LLM): {probability:.4f} "

@@ -3,7 +3,10 @@
 **Fecha:** 2026-10-14 (UTC)
 **Rama:** `corrections-phase2` (desde `experimental/validacion-scopus-fase2`)
 **Commit base congelado:** `ceb0c9e62ab861ce993bd3a1ec636d4d4b3405b7`
-**Congelación vigente (freeze #3):** `0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41`
+**Congelación vigente (freeze #5):** `110a954f7b99eced0bcea66a59700e23f8f6cea34f92db4fa9b4c6ec0fae5f62`
+(con la evaluación de la cohorte2 ejecutada bajo el freeze #3 `0999ef95…`; la
+igualdad de métricas entre #3 y #5 está demostrada byte a byte en
+`artifacts/corrections_phase2/eval/offline_revalidation.json`, 11/11 PASS)
 **Semilla determinista:** `SEED = 42`
 
 ---
@@ -13,8 +16,10 @@
 La fase de corrección **cierra los 8 defectos** (los 7 de la auditoría previa más
 uno —BUG-08— detectado y corregido durante esta misma fase), con:
 
-- **174 pruebas automatizadas, 0 fallos** (47 de ellas de regresión de los
-  defectos; evidencia: `artifacts/corrections_phase2/junit_full_suite.xml`).
+- **186 pruebas automatizadas, 0 fallos** (47 de regresión de los defectos y 12
+  de regresión de las condiciones de las dos auditorías finales —C‑2, C‑3, C‑4,
+  C‑5, MENOR‑1—; evidencia: `artifacts/corrections_phase2/junit_full_suite.xml`,
+  certificada en `VALIDACION_FINAL_AUTOMATICA.json` T‑01, 14/14 PASS).
 - **Una segunda cohorte externa independiente de N = 1,200 URLs** (600 phishing
   + 600 legítimas), construida con etiquetas de PhishTank, URLhaus, OpenPhish,
   Tranco y Majestic, **sin solape** con el corpus interno (176,201 URLs /
@@ -61,7 +66,8 @@ en `MATRIZ_TRAZABILIDAD_FINAL.csv`. Resumen:
 > fase y fue **el propio proceso de validación externa la que la detectó** al
 > auditar los 36 disparadores de la ruta crítica de homógrafos sobre la cohorte2
 > (1 de ellos legítimo e injustificado). Se corrigió antes de congelar el estado
-> definitivo (freeze #3). Queda registrado en
+> de la evaluación (freeze #3); el estado vigente es el freeze #5 (§2), con los
+> mismos modelos y umbrales. Queda registrado en
 > `artifacts/corrections_phase2/FREEZE_HISTORY.md`.
 
 ---
@@ -80,12 +86,17 @@ en `MATRIZ_TRAZABILIDAD_FINAL.csv`. Resumen:
 4. **`phase2d`**, **`phase2e`**, **`phase2g`**, **`phase2i`**: mediciones
    complementarias que no tocan modelos ni etiquetas.
 
-Hubo **tres congelaciones** (historial íntegro en
+Hubo **cinco congelaciones** (historial íntegro en
 `artifacts/corrections_phase2/FREEZE_HISTORY.md`): la inicial antes de consultar
 etiquetas; una segunda por un defecto del **propio script de medición** de la
-Config C (no descontaba presupuesto ni trataba la ausencia de M3); y la tercera
-por BUG‑08. **Ninguna alteró modelos ni umbrales** (verificado comparando los
-bloques `models` y `thresholds_and_normalization` de los manifiestos).
+Config C (no descontaba presupuesto ni trataba la ausencia de M3); la tercera
+por BUG‑08; y la cuarta/quinta tras las **correcciones de las dos auditorías
+finales** (la cuarta fue transitoria: se corrigió un defecto del nuevo
+comprobador `phase2n` y se re-congeló de inmediato). **Ninguna alteró modelos ni
+umbrales** (verificado comparando los bloques `models`,
+`thresholds_and_normalization` y `baseline_original_config_A_B` de los
+manifiestos: idénticos byte a byte entre #3 y #5, ver
+`eval/offline_revalidation.json → freeze_invariants_vs_prev`).
 
 **Cohorte2 congelada** (`cohort2_dataset.csv`, SHA‑256
 `bb8f6284a6779a98cb4a3bec65eaac86f15dfa196713358129535bd131e32f73`):
@@ -233,11 +244,13 @@ El detalle completo está en `REPRODUCIBILIDAD.md`. Lo esencial:
 ## 7. Paquete de evidencia
 
 `evidencia_phishpe_definitiva.zip` (SHA‑256 publicado junto al entregable)
-contiene, sin excepción, los archivos citados: congelaciones y su historial,
-cohorte2 completa (candidatos, excluidos, dataset, etiquetas), todas las salidas
-de `phase2a`–`phase2i`, el XML de las 174 pruebas, la verificación manual de los
-defectos de la auditoría, la reconciliación histórica, los entregables
-generados programáticamente y los resultados E2E de Chrome.
+contiene, sin excepción, los archivos citados: congelaciones y su historial (con
+los manifiestos archivados), cohorte2 completa (candidatos, excluidos, dataset,
+etiquetas), todas las salidas de `phase2a`–`phase2n` (incluido el E2E de Chrome y
+la revalidación offline del freeze), el XML de las 186 pruebas, la verificación
+manual de los defectos de la auditoría, la reconciliación histórica, los dos
+informes de auditoría finales, los entregables generados programáticamente y los
+resultados E2E de Chrome.
 
 **Ninguna cifra de este informe está escrita a mano**: los tres entregables
 cuantitativos (`COMPARACION_ANTES_DESPUES.csv`,
@@ -245,3 +258,54 @@ cuantitativos (`COMPARACION_ANTES_DESPUES.csv`,
 generan con `scripts/phase2h_build_deliverables.py` directamente desde los
 artefactos, y el JSON de validación comprueba además que el número de
 comprobaciones coincide con el número de registros.
+
+---
+
+## 8. Cierre de condiciones de las dos auditorías finales independientes
+
+Ambas auditorías dictaminaron **APTO CON CONDICIONES** (`AUDITORIA_CIENTIFICA_FINAL.md`
+y `AUDITORIA_TECNICA_FINAL.md`, ambos incluidos en el ZIP). Todas las
+condiciones quedan cerradas con evidencia archivada:
+
+### 8.1 Auditoría técnica — C‑1…C‑5
+
+| Condición | Estado | Evidencia |
+|---|---|---|
+| **C‑1 (M‑01)** claves de lectura del manifiesto → bloque `freeze` nulo en la validación | **CERRADA** | `VALIDACION_FINAL_AUTOMATICA.json → freeze` poblado: `manifest_sha256` = freeze #5 `110a954f…`, `git_commit` = `96944d4…`, `dirty`, más `eval_freeze_manifest_sha256` = `0999ef95…` (evaluación) con nota explicativa; test `test_phase2h_freeze_block_uses_real_manifest_keys` |
+| **C‑2 (M‑02)** heurística `xn--` + dominio de marca con FP demostrado | **CERRADA** | `src/phishguard_ml/homoglyphs.py` exige que el dominio registrado *no* sea ya el oficial; tests `test_c2_*` (incl. `xn--caf-dma.apple.com`/`apple.com`); verificación adversarial `_verify_c2_fix.py` → **13/13** (`artifacts/corrections_phase2/verify_c2_fix.log`); sobre la cohorte2: **0 disparadores / 0 diffs** en 1,200 URLs (`eval/bug03_c2_fix_impact_on_cohort2.json`, check T‑14): corrección **latente**, métricas congeladas intactas |
+| **C‑3 (M‑03)** fallback `verify_ssl = False` en `llm_agent.py` | **CERRADA** | `src/phishguard_api/llm_agent.py` sin `verify_ssl`/`CERT_NONE`/`disable_warnings`: ante `SSLError` reintenta con TLS activo y registra el error; tests `TestC3TlsNeverDisabled` (2). Los dos casos **preexistentes fuera del alcance de la condición** (`server.py` `verify=False`, geolocalización por `http://`) se documentan como limitación **L12** |
+| **C‑4 (M‑04/B‑09)** secret‑scan a árbol completo + revisión de `extension.pem` | **CERRADA** | `_secret_scan_before_commit.py` recorre `git ls-files` + no rastreados (**317 ficheros**, 9 patrones): exit 0, **0 secretos sin documentar** (`artifacts/corrections_phase2/secret_scan_final.log`); `extension.pem` clasificado `PREEXISTING_DOCUMENTED` y documentado con plan de rotación en **L11**; test `TestC4SecretScanFullTree` |
+| **C‑5 (B‑01/B‑05)** ZIP con los scripts E2E + conservación de manifiestos #1/#2 | **CERRADA (con nota honesta)** | `phase2j` incluye `e2e_chrome_phase2.py`, `phase2k`, `phase2l/m/n`, ambos informes de auditoría y las verificaciones (test `TestC5EvidencePackIncludesE2e`). Los manifiestos #1/#2 **no existen como ficheros**: fueron sobrescritos antes de que existiera el mecanismo de archivo y **no hay copia recuperable** (verificado en git y temporales); se documenta sin fabricar bytes en `FREEZE_HISTORY.md §Preservación`, y `phase2a` ahora archiva cada manifiesto previo (`freeze_manifest_prev_0999ef95.json`, `freeze_manifest_prev_6b94d5c6.json`) |
+
+### 8.2 Auditoría científica
+
+| Condición | Estado | Evidencia |
+|---|---|---|
+| **MAYOR‑1** hash congelado divergente de `phase2g` | **CERRADA** | Re‑congelación #5 (`FREEZE_HISTORY.md`); `phase2n → eval/offline_revalidation.json` R‑01: `verify_freeze()` **ok=True, mismatches=[]**; `phase2g` re‑ejecutado bajo #5 → `overall_PASS=true` (`phase2g_run3.log`); `models`/`thresholds_and_normalization`/`baseline` **byte‑idénticos al #3** |
+| **MAYOR‑2** tablas H3/E3/E4/E6/E7 contradecían su CSV (5/14 filas) | **CERRADA** | Tablas regeneradas desde `07_all_hypothesis_tests_table.csv` (`scripts/phase2m_regenerate_07_rows.py`); `phase2e` ampliado a consistencia tabla‑vs‑CSV → **14/14 filas de CSV + 14/14 filas de tabla MATCH**, dictamen PASS (`eval/historical_stats_reconciliation.json`) |
+| **MENOR‑1** `phase2b` sin guarda programática de freeze | **CERRADA** | `verify_freeze_guard()` definida e invocada al inicio de `main()`, **antes de consultar etiquetas** (`phase2b:64,329`); tests `test_phase2b_has_programmatic_freeze_guard` y `test_phase2b_freeze_guard_aborts_on_missing_manifest`. *Nota honesta:* la guarda no se estampa retroactivamente en `cohort2_labels_frozen.json` porque eso exigiría re‑ejecutar `phase2b` (re‑consulta de etiquetas, prohibida); la conformidad histórica se sostiene con los timestamps (`freeze` #1 03:15Z < construcción de la cohorte) y la verificación de `phase2c` en la evaluación |
+| **MENOR‑2** bloque `freeze` nulo | **CERRADA** | Mismo cambio que C‑1 (bloque poblado con los campos reales + `eval_freeze_manifest_sha256`) |
+| **MENOR‑3** `phase2h` no bit‑determinista | **CERRADA** | `SOURCE_DATE_EPOCH` soportado en `phase2h` y `phase2k`; dos ejecuciones con `SOURCE_DATE_EPOCH=1760000000` → salidas **byte‑idénticas** (`artifacts/corrections_phase2/phase2h_determinism_check.log`); documentado en `REPRODUCIBILIDAD.md §R8` |
+| **MENOR‑4** texto CJK corrupto en `LIMITACIONES_RESTANTES.md` (L10) | **CERRADA** | Frase L10 reescrita; barrido de caracteres CJK sobre el entregable → **0 coincidencias** |
+
+### 8.3 Hallazgos no condicionales atendidos
+
+- **B‑02** (descripción errónea «4000 ms» de BUG‑01): `phase2h` ya no contiene
+  `4000`; las filas generadas dicen «6000 ms → 8000 ms».
+- **B‑07** (comentario incoherente con la mezcla 0.7/0.3): `worker.py` ahora
+  dice que la incertidumbre del LLM «se calcula y se registra», sin afirmar
+  que ajusta el peso.
+- **B‑05** → cerrado como C‑5; **B‑09** → cerrado como C‑4/L11.
+- **B‑06** (tests de BUG‑01/05/06 basados en patrones de fuente): **aceptado
+  con mitigación** (E2E real para BUG‑01; evaluación externa para BUG‑05/07);
+  no era condición y queda declarado.
+
+### 8.4 Ítems que siguen abiertos (declarados, no ocultos)
+
+1. Rotación/exclusión de `extension.pem` del historial de git — **pendiente de
+   aprobación** (L11).
+2. Evaluación del blend LLM con API de pago — **no autorizada**; solo código +
+   pruebas de regresión (L2).
+3. El bloque de sondeo en vivo de `phase2c` (B/C, 600 URLs) **no se re-ejecuta**
+   bajo el freeze #5 para no introducir deriva de red: la revalidación es
+   offline y por duplicado (`phase2n`, 11/11 PASS).

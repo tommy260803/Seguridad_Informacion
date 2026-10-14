@@ -209,6 +209,93 @@ def main() -> None:
                                    for c in checks if c["comparison"] == "M2_vs_M3"), {}),
     })
 
+    # ---- Consistencia TABLA H1-H6/E1-E8 vs CSV canónico (MAYOR-2) ----------
+    # Parsea las filas de las dos tablas del informe 07 y contrasta cada celda
+    # numérica clave (F1_A, F1_B, Δ, n01, n10, p exacto, Holm) con el CSV.
+    MD_ROW_TO_COMPARISON = {
+        "H1": "M0_vs_M1", "H2": "M0_vs_M2", "H3": "M0_vs_M4",
+        "H4": "M0_decided_vs_M5_selective",
+        "H5": "M0_External_vs_HybridM0_NoTranco_External",
+        "H6": "M0_External_vs_HybridM0_WithTranco_External",
+        "E1": "M1_vs_M2", "E2": "M2_vs_M3", "E3": "M2_vs_M4",
+        "E4": "M4_vs_M5_FailClosed", "E5": "M2_decided_vs_M5_selective",
+        "E6": "M0_vs_HybridM0_ConfigA", "E7": "M4_vs_ConfigC_HybridCascade",
+        "E8": "HybridM0_NoTranco_External_vs_HybridM0_WithTranco_External",
+    }
+
+    def fmt_p_md(x: float) -> str:
+        if x == 0.0:
+            # el CSV publica 0.0 por underflow; el informe lo expresa como cota
+            return "< 1e-15"
+        if x < 1e-4:
+            return f"{x:.2e}".replace("e-0", "e-")
+        return fmt4(x)
+
+    def fmt4(x: float) -> str:
+        """Redondeo decimal half-up a 4 decimales (mismo criterio que el informe)."""
+        from decimal import ROUND_HALF_UP, Decimal
+
+        return str(Decimal(repr(x)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP))
+
+    def fmt_ci_md(raw: str) -> str:
+        """'[0.034824, 0.0881]' -> '[+0.0348, +0.0881]' (formato del informe)."""
+        inner = raw.strip().strip("[]")
+        lo, hi = [p.strip() for p in inner.split(",")]
+
+        def one(v: str) -> str:
+            fv = float(v)
+            return ("+" if fv >= 0 else "-") + fmt4(abs(fv))
+
+        return f"[{one(lo)}, {one(hi)}]"
+
+    def fmt_delta_md(x: float) -> str:
+        return ("+" if x >= 0 else "-") + fmt4(abs(x))
+
+    def cell(s: str) -> str:
+        return s.strip().replace("*", "").replace("`", "").strip()
+
+    table_checks: list[dict[str, Any]] = []
+    for line in md.splitlines():
+        m = re.match(r"^\|\s*\*\*([HE][1-8])\*\*\s*\|", line)
+        if not m:
+            continue
+        rid = m.group(1)
+        parts = [p for p in line.strip().strip("|").split("|")]
+        if len(parts) < 15:
+            table_checks.append({"row": rid, "status": "PARSE_ERROR", "n_cells": len(parts)})
+            continue
+        comp = MD_ROW_TO_COMPARISON.get(rid, "")
+        crow = csv_by_id.get(comp)
+        if crow is None:
+            table_checks.append({"row": rid, "status": "NO_CSV_ROW", "comparison": comp})
+            continue
+        md_vals = {
+            "f1_a": cell(parts[3]), "f1_b": cell(parts[4]),
+            "delta_f1_b_minus_a": cell(parts[5]),
+            "delta_f1_ci95_sample_bootstrap": cell(parts[6]),
+            "delta_f1_ci95_cluster_bootstrap": cell(parts[7]),
+            "n01_b_correct_a_wrong": cell(parts[8]), "n10_a_correct_b_wrong": cell(parts[9]),
+            "mcnemar_p_exact": cell(parts[10]), "p_holm_bonferroni": cell(parts[11]),
+        }
+        exp = {
+            "f1_a": f"{float(crow['f1_a']):.4f}",
+            "f1_b": f"{float(crow['f1_b']):.4f}",
+            "delta_f1_b_minus_a": fmt_delta_md(float(crow["delta_f1_b_minus_a"])),
+            "delta_f1_ci95_sample_bootstrap": fmt_ci_md(crow["delta_f1_ci95_sample_bootstrap"]),
+            "delta_f1_ci95_cluster_bootstrap": fmt_ci_md(crow["delta_f1_ci95_cluster_bootstrap"]),
+            "n01_b_correct_a_wrong": str(int(crow["n01_b_correct_a_wrong"])),
+            "n10_a_correct_b_wrong": str(int(crow["n10_a_correct_b_wrong"])),
+            "mcnemar_p_exact": fmt_p_md(float(crow["mcnemar_p_exact"])),
+            "p_holm_bonferroni": fmt_p_md(float(crow["p_holm_bonferroni"])),
+        }
+        diffs = {k: {"md": md_vals[k], "csv_expected": exp[k]}
+                 for k in exp if md_vals[k] != exp[k]}
+        table_checks.append({"row": rid, "comparison": comp,
+                             "status": "MATCH" if not diffs else "MISMATCH",
+                             "differences": diffs})
+
+    n_tbl_bad = sum(1 for t in table_checks if t["status"] != "MATCH")
+
     statuses = [c["status"] for c in checks]
     payload = {
         "published_csv": str(CSV_PUBLISHED.relative_to(ROOT)),
@@ -219,18 +306,28 @@ def main() -> None:
         "n_not_recomputed": statuses.count("NOT_RECOMPUTED"),
         "row_checks": checks,
         "textual_claims": text_claims,
+        "table_vs_csv_checks": table_checks,
+        "n_table_rows_checked": len(table_checks),
+        "n_table_mismatch": n_tbl_bad,
         "dictamen": ("PASS: todas las filas del CSV publicado son reproducibles desde los "
-                     "predictions.csv congelados" if statuses.count("MISMATCH") == 0 and
-                    statuses.count("NOT_RECOMPUTED") == 0
-                    else "REVISAR: hay filas no reproducibles o discrepantes (ver row_checks)"),
+                     "predictions.csv congelados y las 14 filas de las tablas del informe 07 "
+                     "coinciden con el CSV canónico" if statuses.count("MISMATCH") == 0 and
+                    statuses.count("NOT_RECOMPUTED") == 0 and n_tbl_bad == 0
+                    else "REVISAR: hay filas no reproducibles, discrepantes o tablas vs CSV "
+                         "desalineadas (ver row_checks / table_vs_csv_checks)"),
     }
     out = EVAL / "historical_stats_reconciliation.json"
     out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({k: payload[k] for k in ("n_rows_published", "n_match", "n_mismatch",
-                                              "n_not_recomputed", "dictamen")}, indent=2, ensure_ascii=False))
+                                              "n_not_recomputed", "n_table_rows_checked",
+                                              "n_table_mismatch", "dictamen")}, indent=2,
+                     ensure_ascii=False))
     for c in checks:
         if c["status"] != "MATCH":
             print(f"  [{c['status']}] {c['comparison']}: {c.get('differences_vs_published_csv') or c.get('reason')}")
+    for t in table_checks:
+        if t["status"] != "MATCH":
+            print(f"  [tabla {t['status']}] {t['row']}: {t.get('differences') or t.get('n_cells') or t.get('comparison')}")
     for t in text_claims:
         print(f"  [claim] {t['claim'][:60]} -> csv={t['csv_values']} recomputed={t['recomputed_values']}")
 

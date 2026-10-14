@@ -1,0 +1,63 @@
+Cierre de condiciones de las auditorías finales: freeze #5, revalidación offline y entregables regenerados
+
+Segundo commit de la rama corrections-phase2 (el primero, 96944d4, congeló el
+estado previo a las auditorías). Cierra todas las condiciones de los dos
+dictámenes APTO CON CONDICIONES con evidencia archivada:
+
+- C-1 / MENOR-2: phase2h lee las claves reales del manifiesto -> bloque
+  "freeze" de VALIDACION_FINAL_AUTOMATICA.json poblado (manifest_sha256,
+  git_commit, dirty, eval_freeze_manifest_sha256 + nota explicativa).
+- C-2: homoglyphs.py exige que el dominio registrado no sea ya el oficial
+  (FP "xn-- + dominio de marca" corregido); tests test_c2_*;
+  _verify_c2_fix.py 13/13; phase2l: 0 disparadores / 0 diffs sobre la
+  cohorte2 (N=1200) -> correccion latente, metricas congeladas intactas (T-14).
+- C-3: llm_agent.py sin fallback verify_ssl=False; TLS nunca desactivado
+  (TestC3TlsNeverDisabled); los dos casos preexistentes fuera del alcance de
+  la condicion (server.py verify=False, geolocalizacion por http://) quedan
+  documentados como limitacion L12.
+- C-4: _secret_scan_before_commit.py a arbol completo (317 ficheros, exit 0,
+  0 secretos sin documentar); extension.pem clasificado
+  PREEXISTING_DOCUMENTED y documentado con plan de rotacion en L11 (B-09).
+- C-5: phase2j incluye e2e_chrome_phase2.py, phase2k/l/m/n y ambos informes
+  de auditoria; los manifiestos #1/#2 resultaron irrecuperables (solo
+  sobreviven SHA-256 y logs) y se documentan sin fabricar bytes en
+  FREEZE_HISTORY.md S_Preservacion; phase2a archiva ahora cada manifiesto
+  previo (freeze_manifest_prev_<sha8>.json) para que no se pierda ninguno.
+- MAYOR-1: re-congelacion #5 con verify_freeze() ok (mismatches=[]) y phase2g
+  verde bajo el nuevo freeze; invariantes models / thresholds_and_normalization
+  / baseline byte-identicos a los del #3 (eval/offline_revalidation.json).
+- MAYOR-2: tablas H3/E3/E4/E6/E7 de 07_ANALISIS_ESTADISTICO.md regeneradas
+  desde su CSV (phase2m); phase2e ampliado a consistencia tabla-vs-CSV:
+  14/14 filas de CSV + 14/14 filas de tabla MATCH, dictamen PASS.
+- MENOR-1: verify_freeze_guard() en phase2b invocada antes de consultar
+  etiquetas (tests de aborto ante manifiesto ausente); la guarda no se
+  estampa retroactivamente en cohort2_labels_frozen.json para no re-ejecutar
+  la consulta de etiquetas.
+- MENOR-3: SOURCE_DATE_EPOCH en phase2h y phase2k; prueba de dos corridas
+  byte-identicas en phase2h_determinism_check.log (REPRODUCIBILIDAD R8).
+- MENOR-4: texto CJK corrupto de la limitacion L10 eliminado (0 coincidencias).
+- B-02: "4000" fuera de phase2h (la descripcion correcta es 6000 -> 8000 ms).
+- B-07: comentario de worker.py corregido (la incertidumbre del LLM se
+  calcula y se registra; el peso de la mezcla es fijo 0.7/0.3).
+
+Nuevo comprobador scripts/phase2n_revalidate_offline.py: 11/11 PASS. Bajo el
+freeze #5, los bloques offline de phase2c (A: nivel URL, D: recomputacion
+interna, E: pareado www) reproducen byte a byte los artefactos congelados del
+#3, sin red y sin sobrescribir los canonicos (eval/offline_revalidation.json).
+El bloque de sondeo en vivo (B/C, 600 URLs) NO se re-ejecuta: la evaluacion
+historica se conserva intacta bajo el freeze #3.
+
+INFORME_FINAL_PHISHPE_CORREGIDO.md: nueva seccion 8 con el cierre condicion a
+condicion y los items que siguen abiertos (extension.pem pendiente de
+aprobacion, blend LLM sin API de pago, sondeo vivo no re-ejecutado).
+
+Pruebas: 186 passed, 0 failures (junit_full_suite.xml).
+Validacion automatica: 14/14 checks PASS (8 registros de defecto).
+Secretos: 0 sin documentar, exit 0.
+
+Freeze vigente: 110a954f7b99eced0bcea66a59700e23f8f6cea34f92db4fa9b4c6ec0fae5f62
+Freeze de la evaluacion historica: 0999ef95922262a6b796cf1dc2aa5515c095f47d179bf7945ba327ee78d92c41
+ZIP evidencia: 369e193589c20fa637d5373eb54dc89f519df87753370e840f0510df2aba04af
+  (evidencia_phishpe_definitiva.zip, 175 entradas, 332804835 bytes)
+
+No se modifican manuscritos (.docx intactos) ni se consultan APIs de pago.
