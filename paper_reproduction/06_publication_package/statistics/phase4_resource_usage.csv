@@ -1,0 +1,6 @@
+component,device,peak_memory_kb,mean_cpu_time_per_sample_ms,throughput_samples_per_sec,io_network_bound
+M0_Pipeline,CPU,444.14,14.74,67.8,False
+M1_Pipeline,CPU + Socket I/O,888.28,29.249,0.64,True
+M2_Pipeline,CPU + Socket I/O + HTML DOM,1332.43,43.817,0.63,True
+M3_Pipeline,CPU + Chrome CDP Headless,1776.57,58.281,0.26,True
+Cascada_Adaptativa,Adaptive Progressive Pipeline,1510.08,29.249,0.76,"Adaptive (39% pure CPU, 61% network)"

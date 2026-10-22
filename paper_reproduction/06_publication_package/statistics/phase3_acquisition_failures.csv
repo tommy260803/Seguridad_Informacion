@@ -1,0 +1,45 @@
+stage,error_code,class,source,frequency,pct_of_class,pct_of_total_probe,root_cause_explanation
+Contenido_HTML_M2,non_html_content_type,phishing,urlhaus,96,32.0,16.0,"Endpoint de descarga directa de binarios maliciosos (.bin, .sh, .exe, .apk) sin interfaz web HTML."
+Infraestructura_M1,disallowed_port,phishing,urlhaus,77,25.67,12.83,"Política de seguridad del Sandbox que bloquea puertos inusuales (e.g. :45209, :38636) para prevenir escaneos e infecciones de botnets."
+Contenido_HTML_M2,url_error,phishing,phishtank,65,21.67,10.83,Conexión TCP rechazada (Connection Refused) o host de red inalcanzable.
+Infraestructura_M1,dns_empty,phishing,phishtank,54,18.0,9.0,Takedown del dominio registrado / registro DNS extinto por caducidad o suspensión.
+Contenido_HTML_M2,url_error,legitimate,tranco,35,11.67,5.83,Conexión TCP rechazada (Connection Refused) o host de red inalcanzable.
+Contenido_HTML_M2,http_499,phishing,urlhaus,23,7.67,3.83,Cierre de conexión por parte del cliente antes de recibir cabeceras completas.
+Contenido_HTML_M2,http_404,phishing,phishtank,22,7.33,3.67,Página o recurso eliminado del servidor de hosting comprometido.
+Infraestructura_M1,dns_empty,legitimate,tranco,16,5.33,2.67,Takedown del dominio registrado / registro DNS extinto por caducidad o suspensión.
+Contenido_HTML_M2,http_403,phishing,openphish,15,5.0,2.5,"Servidor web bloquea peticiones automáticas / WAF activo (Cloudflare, Akamai)."
+Contenido_HTML_M2,http_403,legitimate,tranco,15,5.0,2.5,"Servidor web bloquea peticiones automáticas / WAF activo (Cloudflare, Akamai)."
+Contenido_HTML_M2,http_403,phishing,phishtank,14,4.67,2.33,"Servidor web bloquea peticiones automáticas / WAF activo (Cloudflare, Akamai)."
+Contenido_HTML_M2,url_error,legitimate,majestic,14,4.67,2.33,Conexión TCP rechazada (Connection Refused) o host de red inalcanzable.
+Infraestructura_M1,timeout,legitimate,tranco,11,3.67,1.83,Agotamiento del tiempo de espera de conexión TCP o resolución DNS (> 5000 ms).
+Contenido_HTML_M2,url_error,phishing,urlhaus,10,3.33,1.67,Conexión TCP rechazada (Connection Refused) o host de red inalcanzable.
+Contenido_HTML_M2,http_403,legitimate,majestic,9,3.0,1.5,"Servidor web bloquea peticiones automáticas / WAF activo (Cloudflare, Akamai)."
+Infraestructura_M1,timeout,phishing,phishtank,8,2.67,1.33,Agotamiento del tiempo de espera de conexión TCP o resolución DNS (> 5000 ms).
+Infraestructura_M1,timeout,legitimate,majestic,7,2.33,1.17,Agotamiento del tiempo de espera de conexión TCP o resolución DNS (> 5000 ms).
+Contenido_HTML_M2,http_451,phishing,phishtank,4,1.33,0.67,Recurso bloqueado por razones legales / DMCA / orden judicial.
+Infraestructura_M1,network_error,phishing,urlhaus,3,1.0,0.5,Fallo genérico de la pila de sockets del sistema operativo.
+Infraestructura_M1,dns_empty,legitimate,majestic,3,1.0,0.5,Takedown del dominio registrado / registro DNS extinto por caducidad o suspensión.
+Contenido_HTML_M2,socket_or_tls_error,legitimate,tranco,3,1.0,0.5,Fallo en la negociación TLS / apretón de manos criptográfico.
+Contenido_HTML_M2,http_503,phishing,phishtank,2,0.67,0.33,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_404,legitimate,majestic,2,0.67,0.33,Página o recurso eliminado del servidor de hosting comprometido.
+Contenido_HTML_M2,socket_or_tls_error,legitimate,majestic,2,0.67,0.33,Fallo en la negociación TLS / apretón de manos criptográfico.
+Contenido_HTML_M2,http_404,legitimate,tranco,2,0.67,0.33,Página o recurso eliminado del servidor de hosting comprometido.
+Infraestructura_M1,blocked_address,phishing,phishtank,1,0.33,0.17,Dirección IP privada o reservada (RFC 1918 / Loopback) filtrada por seguridad.
+Contenido_HTML_M2,socket_or_tls_error,phishing,phishtank,1,0.33,0.17,Fallo en la negociación TLS / apretón de manos criptográfico.
+Contenido_HTML_M2,http_403,phishing,urlhaus,1,0.33,0.17,"Servidor web bloquea peticiones automáticas / WAF activo (Cloudflare, Akamai)."
+Contenido_HTML_M2,http_402,phishing,phishtank,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_404,phishing,openphish,1,0.33,0.17,Página o recurso eliminado del servidor de hosting comprometido.
+Infraestructura_M1,timeout,phishing,urlhaus,1,0.33,0.17,Agotamiento del tiempo de espera de conexión TCP o resolución DNS (> 5000 ms).
+Contenido_HTML_M2,socket_or_tls_error,phishing,urlhaus,1,0.33,0.17,Fallo en la negociación TLS / apretón de manos criptográfico.
+Contenido_HTML_M2,non_html_content_type,legitimate,tranco,1,0.33,0.17,"Endpoint de descarga directa de binarios maliciosos (.bin, .sh, .exe, .apk) sin interfaz web HTML."
+Contenido_HTML_M2,http_502,legitimate,majestic,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_401,legitimate,tranco,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_500,legitimate,majestic,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_405,legitimate,majestic,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,http_502,legitimate,tranco,1,0.33,0.17,Fallo operacional de red no categorizado.
+Infraestructura_M1,network_error,legitimate,tranco,1,0.33,0.17,Fallo genérico de la pila de sockets del sistema operativo.
+Infraestructura_M1,blocked_address,legitimate,majestic,1,0.33,0.17,Dirección IP privada o reservada (RFC 1918 / Loopback) filtrada por seguridad.
+Contenido_HTML_M2,http_523,legitimate,tranco,1,0.33,0.17,Fallo operacional de red no categorizado.
+Contenido_HTML_M2,empty_body,legitimate,tranco,1,0.33,0.17,Fallo operacional de red no categorizado.
+Infraestructura_M1,blocked_address,legitimate,tranco,1,0.33,0.17,Dirección IP privada o reservada (RFC 1918 / Loopback) filtrada por seguridad.
+Infraestructura_M1,redirect_limit,legitimate,tranco,1,0.33,0.17,Bucle infinito de redirecciones HTTP (> 10 hops).

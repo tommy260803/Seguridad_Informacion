@@ -1,0 +1,6 @@
+comparison,n,n11_both_correct,n00_both_wrong,n10_ref_correct_cand_wrong,n01_ref_wrong_cand_correct,mcnemar_discordances,mcnemar_odds_ratio,mcnemar_p_value,delta_f1_mean,delta_f1_ci95,non_inferiority_margin,non_inferior_decision
+Politica_B_vs_Politica_A,691,662,24,4,1,5,0.25,0.375,-0.0096,"(-0.0237, 0.0023)",-0.015,INFERIOR_NO_DESCARTADO
+Politica_C_vs_Politica_A,691,665,24,1,1,2,1.0,1.0,-0.0002,"(-0.008, 0.0076)",-0.015,NO_INFERIOR_CONFIRMADO
+Politica_C_vs_Politica_B,691,663,25,0,3,3,999.0,0.25,0.0091,"(0.0, 0.0201)",-0.015,NO_INFERIOR_CONFIRMADO
+Politica_E_vs_Politica_B,691,663,25,0,3,3,999.0,0.25,0.0088,"(0.0, 0.0209)",-0.015,NO_INFERIOR_CONFIRMADO
+Politica_E_vs_Politica_C,691,666,25,0,0,0,1.0,1.0,0.0,"(0.0, 0.0)",-0.015,NO_INFERIOR_CONFIRMADO

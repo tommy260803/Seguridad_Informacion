@@ -1,0 +1,8 @@
+hypothesis_test_id,comparison,test_type,sample_size,test_statistic,raw_p_value,bonferroni_p_value,fdr_bh_p_value,significant_at_0_05,mean_effect_size,ci95_low,ci95_high,non_inferiority_margin,non_inferior_confirmed
+TEST-01,Cascada_Original vs M2_Completo,McNemar Exact + Bootstrap Difference,691,"b=1, c=4, chi2=0.800",0.375,1.0,0.525,False,-0.0091,-0.0234,0.0022,-0.02,False
+TEST-02,Cascada_Asimétrica vs M2_Completo,Exploratory Non-Inferiority Analysis (Post-hoc delta=0.02),691,"b=1, c=1, chi2=0.500",1.0,1.0,1.0,False,-0.0004,-0.0085,0.0074,-0.02,Supported (Exploratory / Post-hoc)
+TEST-03,Cascada_Asimétrica vs Cascada_Original,McNemar Exact + Paired Bootstrap,691,"b=3, c=0, chi2=1.333",0.25,1.0,0.4375,False,0.009,0.0,0.0206,N/A,N/A
+TEST-04,Cascada_Original vs M0_Léxico,McNemar Exact + Paired Bootstrap,691,"b=25, c=4, chi2=13.793",0.000104,0.000728,0.000364,True,0.0566,0.0297,0.0862,N/A,Superiority Confirmed
+TEST-05,M1_Infra vs M0_Léxico,McNemar Exact + Paired Bootstrap,691,"b=24, c=2, chi2=16.962",1e-05,7e-05,7e-05,True,0.0597,0.0348,0.0877,N/A,Superiority Confirmed
+TEST-06,M2_Completo vs M1_Infra,McNemar Exact + Paired Bootstrap,691,"b=8, c=6, chi2=0.071",0.7905,1.0,0.9223,False,0.0062,-0.0137,0.027,N/A,N/A
+TEST-07,Cascada_Margen_Simple vs Cascada_Original,McNemar Exact + Paired Bootstrap,691,"b=1, c=8, chi2=4.000",0.0391,0.2734,0.0911,False,-0.0214,-0.0391,-0.0062,N/A,N/A

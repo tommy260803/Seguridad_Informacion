@@ -1,0 +1,6 @@
+component,ablated_variant,delta_f1_gain,delta_weighted_risk_reduction,false_negatives_prevented,premature_fn_prevented_stage0,cost_overhead_or_saving
+Disponibilidad de Modalidades (pi_m),A1,0.0,-0.03483333333333355,0,-2,-0.022532273202293784
+Costes Asimétricos (gamma=15),A2,0.01122069332073461,1.072333333333334,5,9,-0.20819523839842058
+Mecanismo de Abstención,A3,0.01412429378531066,0.26666666666666744,-15,0,0.1598240019094923
+Valor Informativo Esperado,A4,0.050356177843281724,0.02749999999999958,15,18,-0.07397301757785729
+Guarda Benigna en M0,A5,0.0,0.0,0,0,0.0

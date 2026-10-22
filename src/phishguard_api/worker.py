@@ -12,6 +12,10 @@ from phishguard_api.budget_tracker import ExecutionBudgetTracker
 
 from dataclasses import replace
 from phishguard_orchestrator.engine import AdaptivePolicy, decide_next
+try:
+    from phishguard_orchestrator.raea.engine import decide_next_raea
+except ImportError:
+    decide_next_raea = None
 from phishguard_api.inference import predict_m0, predict_m1, predict_m2, predict_m3, _extract_url_base_features
 
 async def recover_zombie_jobs():
@@ -132,12 +136,23 @@ async def process_job(session: AsyncSession, job: Job):
         # Bucle del orquestador adaptativo
         while True:
             print(f"Worker {job.id}: decidiendo paso {step}", flush=True)
-            # 1. El orquestador matemático decide qué hacer (M5)
-            action, reason, confidence, uncertainty = decide_next(
-                probability, tuple(consulted), 
-                replace(policy, budget=policy.budget - spent), 
-                step=step
-            )
+            # 1. El orquestador matematico decide que hacer (M5 o RAEA experimental)
+            use_raea = os.environ.get('PHISHGUARD_ORCHESTRATOR_POLICY', '').lower() == 'raea'
+            if use_raea and decide_next_raea is not None:
+                action, reason, confidence, uncertainty = decide_next_raea(
+                    probability,
+                    tuple(consulted),
+                    accumulated_features.get('url', {}),
+                    step=step - 1,
+                    remaining_budget=policy.budget - spent,
+                    spent_cost=spent,
+                )
+            else:
+                action, reason, confidence, uncertainty = decide_next(
+                    probability, tuple(consulted),
+                    replace(policy, budget=policy.budget - spent),
+                    step=step
+                )
             # Removed force_visual override that was forcing M3 with empty data
             # The orchestrator now properly respects the order of modality acquisition
             # and only requests visual when data has been genuinely acquired

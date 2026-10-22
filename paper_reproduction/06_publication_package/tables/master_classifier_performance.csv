@@ -1,0 +1,8 @@
+model_or_policy,evaluation_cohort_n,accuracy,precision,recall,f1_score,f1_ci95_low,f1_ci95_high,fpr,fnr,roc_auc,brier_score,ece_calibration,average_modalities,primary_modalities_used
+M0_Léxico_Puro,691,0.9291,0.908,0.8272,0.8658,0.8278,0.9011,0.032,0.1728,0.9097,0.0636,0.0862,1.0,URL Syntax & Authority features (11 features)
+M1_Infraestructura,691,0.9609,0.9824,0.8743,0.9252,0.8937,0.9512,0.006,0.1257,0.9759,0.0361,0.0238,2.0,URL Authority + DNS records + TLS Certificate (36 features)
+M2_Monolítico_DOM,691,0.9638,0.977,0.8901,0.9315,0.9036,0.9565,0.008,0.1099,0.9864,0.029,0.0194,3.0,URL Authority + Infra + HTML DOM tree & forms (62 features)
+M3_Visual_Chrome_CDP,83,0.9277,1.0,0.7857,0.88,0.8,0.9412,0.0,0.2143,0.9786,0.0285,0.0169,4.0,URL + Infra + DOM + Authentic Headless Chrome CDP Capture
+Cascada_Original_M4,691,0.9595,0.9822,0.8691,0.9222,0.8943,0.9499,0.006,0.1309,Adaptive,Adaptive,Adaptive,1.851,Progressive M0->M1->M2 with Shannon Entropy Early Exit (H<=0.15)
+Cascada_Asimétrica_PolC,691,0.9638,0.9826,0.8848,0.9311,0.9028,0.9574,0.006,0.1152,Adaptive,Adaptive,Adaptive,2.169,Progressive with Asymmetric Benign Guard (p0 <= 0.005 for benign exit)
+Cascada_Selectiva_PolD_Decididos,666,0.9745,1.0,0.9034,0.9493,0.9235,0.9714,0.0,0.0966,Selective,Selective,Selective,1.851,Progressive Cascade + Rejection/Abstention on high uncertainty (H2 > 0.50)

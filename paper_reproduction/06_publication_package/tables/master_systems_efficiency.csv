@@ -1,0 +1,8 @@
+pipeline_strategy,evaluated_n,p50_median_latency_ms,mean_latency_ms,p95_latency_ms,time_savings_vs_m3_pct,time_savings_vs_m2_pct,cpu_time_per_sample_ms,peak_memory_kb,api_p50_ms,badge_render_warm_ms,badge_render_cold_ms
+M0_Léxico_Puro,83,6.0,6.19,7.74,99.84,99.6,14.74,445.31,19.75,0.25,20.0
+M1_URL_Infraestructura,83,1207.15,1555.63,3292.74,59.16,0.68,29.25,890.62,N/A (Async),0.25,1207.4
+M2_Monolítico_DOM,83,1217.62,1566.24,3301.49,58.89,0.0,44.07,1335.93,N/A (Async),0.25,1217.87
+M3_Visual_Chrome_CDP,83,3768.69,3809.53,5691.47,0.0,-143.23,58.74,1781.24,N/A (Async),0.25,3768.94
+Cascada_Original_M4,83,464.8,1073.82,4336.19,71.81,31.44,29.25,1514.06,19.75,0.25,465.05
+Cascada_Asimétrica_PolC,83,970.51,1291.88,3408.43,66.09,17.52,35.12,1514.06,19.75,0.25,970.76
+Cascada_con_Fallback_EstratC,83,968.44,1193.04,3290.11,68.68,23.83,32.4,1514.06,19.75,0.25,968.69

@@ -1,0 +1,6 @@
+test_id,component,description,required_fields,result,latency_ms
+EXT-01_PAYLOAD_CONTRACT,Chrome MV3 background.js -> POST /check,Verifica que el payload de salida contenga los campos requeridos por la extension,"['decision', 'probability', 'model', 'reputation', 'risk_breakdown']",PASSED,4.2
+EXT-02_TRANCO_FAST_PATH,Filtro Bloom Tranco Top-1M,Dominios de alta reputacion resuelven en < 1ms con veredicto legitimate,"['reputation_tier', 'trust_score']",PASSED,0.08
+EXT-03_LOCAL_CACHE_SIMULATION,Chrome MV3 Cache (180 segundos),Consultas sucesivas a la misma URL no generan carga en el backend,['cached'],PASSED,0.02
+EXT-04_ASYNC_JOB_HANDOFF,POST /analyses -> Background Worker,Sitios sospechosos o con evidencia faltante se encolan para analisis profundo,"['id', 'status']",PASSED,12.5
+EXT-05_WARNING_REDIRECT_SAFEGUARD,Chrome MV3 warning.html,Veredictos de phishing activan pantalla de advertencia y cancelan navegacion,"['warning_url', 'block_reason']",PASSED,1.1

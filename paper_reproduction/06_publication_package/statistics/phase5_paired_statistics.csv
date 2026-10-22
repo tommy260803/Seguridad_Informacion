@@ -1,0 +1,8 @@
+comparison,policy_a,policy_b,n_paired,mcnemar_b_a_better,mcnemar_c_b_better,mcnemar_chi2,mcnemar_p_value_raw,mean_delta_f1,ci95_delta_f1_low,ci95_delta_f1_high,ci975_onesided_low,bootstrap_p_value,non_inferiority_margin,non_inferior_established,p_value_bonferroni,p_value_fdr_bh,significant_fdr_0_05
+Cascada_Original vs M2_Completo,Cascada_Original,M2_Completo,691,1,4,0.8,0.375,-0.0091,-0.0234,0.0022,-0.0234,0.105,-0.02,False,1.0,0.525,False
+Cascada_Asimétrica vs M2_Completo,Cascada_Asimétrica,M2_Completo,691,1,1,0.5,1.0,-0.0004,-0.0085,0.0074,-0.0085,0.957,-0.02,True,1.0,1.0,False
+Cascada_Asimétrica vs Cascada_Original,Cascada_Asimétrica,Cascada_Original,691,3,0,1.3333,0.25,0.009,0.0,0.0206,0.0,0.108,,,1.0,0.4375,False
+Cascada_Original vs M0_Léxico,Cascada_Original,M0_Léxico,691,25,4,13.7931,0.000104,0.0566,0.0297,0.0862,0.0297,0.0005,,,0.000728,0.000364,True
+M1_Infra vs M0_Léxico,M1_Infra,M0_Léxico,691,24,2,16.9615,1e-05,0.0597,0.0348,0.0877,0.0348,0.0005,,,7e-05,7e-05,True
+M2_Completo vs M1_Infra,M2_Completo,M1_Infra,691,8,6,0.0714,0.790527,0.0062,-0.0137,0.027,-0.0137,0.531,,,1.0,0.922281,False
+Cascada_Margen_Simple vs Cascada_Original,Cascada_Margen_Simple,Cascada_Original,691,1,8,4.0,0.039062,-0.0214,-0.0391,-0.0062,-0.0391,0.005,,,0.273434,0.091145,False

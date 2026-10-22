@@ -1,0 +1,7 @@
+test_type,policy_1,policy_2,n_paired,wilcoxon_statistic,p_value,significant_at_0_01,mean_difference_ms,ci95_mean_diff_low,ci95_mean_diff_high,median_difference_ms,interpretation
+Wilcoxon_signed_rank_paired,Cascada_Original,M3_pure,83,0.0,1.658751802376398e-13,True,-2756.346,-3119.804,-2408.0245,-2727.4997,Cascada_Original is significantly faster than M3_pure (p < 0.01)
+Wilcoxon_signed_rank_paired,Cascada_Original,M2_pure,83,638.0,0.00014853576106401055,True,-504.6542,-862.9264,-152.5264,-24.8997,Cascada_Original is significantly faster than M2_pure (p < 0.01)
+Wilcoxon_signed_rank_paired,Cascada_Asimetrica,M3_pure,83,0.0,1.149055714851407e-14,True,-2539.4751,-2803.2825,-2281.372,-2405.0666,Cascada_Asimetrica is significantly faster than M3_pure (p < 0.01)
+Wilcoxon_signed_rank_paired,Cascada_Asimetrica,M2_pure,83,287.0,6.978117409359596e-10,True,-287.7833,-478.3759,-92.3761,-23.3375,Cascada_Asimetrica is significantly faster than M2_pure (p < 0.01)
+Wilcoxon_signed_rank_paired,Cascada_Asimetrica,Cascada_Original,83,408.0,0.30995962608799965,False,216.8709,-137.6059,583.3158,0.0,No statistically significant difference (p >= 0.01)
+Wilcoxon_signed_rank_paired,Cascada_Original,M0_pure,83,0.0,5.1792547772953776e-09,True,1076.8246,744.423,1414.0574,475.9519,Cascada_Original is significantly slower than M0_pure (p < 0.01)

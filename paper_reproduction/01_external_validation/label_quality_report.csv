@@ -1,0 +1,6 @@
+source,total_samples,phishing_verificado,legitimo_verificado,malware_no_phishing,etiqueta_incierta,no_verificable,pct_label_concordance_phishing_task,principal_risk_factor
+urlhaus,297,0,0,297,0,0,0.0,Malware distribution endpoints (77.4% raw IP hosts; botnet binaries; NOT credential phishing)
+phishtank,260,260,0,0,0,0,100.0,High quality phishing feeds; verified by consensus or targeted brand monitoring
+openphish,43,43,0,0,0,0,100.0,High quality phishing feeds; verified by consensus or targeted brand monitoring
+majestic,211,0,211,0,0,0,100.0,"Bare root domains (0% paths, 0% params); popularity ranking does not reflect web portal depth"
+tranco,389,0,389,0,0,0,100.0,"Bare root domains (0% paths, 0% params); popularity ranking does not reflect web portal depth"

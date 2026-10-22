@@ -1,0 +1,8 @@
+baseline_id,baseline_name,n_total,coverage_pct,abstention_pct,accuracy,precision,recall,f1_score,f1_ci95_low,f1_ci95_high,fpr,fnr,roc_auc,avg_modalities,html_acquisitions_avoided_pct
+Baseline_A,M0_Fijo (Léxico),691,100.0,0.0,0.9291,0.908,0.8272,0.8658,0.8278,0.9011,0.032,0.1728,0.9097,1.0,100.0
+Baseline_B,M1_Fijo (URL + Infra),691,100.0,0.0,0.9609,0.9824,0.8743,0.9252,0.8937,0.9512,0.006,0.1257,0.9759,2.0,100.0
+Baseline_C,M2_Completo (Monolítico DOM),691,100.0,0.0,0.9638,0.977,0.8901,0.9315,0.9036,0.9565,0.008,0.1099,0.9864,3.0,0.0
+Baseline_D,Cascada_Original (M4 Simétrica H<=0.15),691,100.0,0.0,0.9595,0.9822,0.8691,0.9222,0.8943,0.9499,0.006,0.1309,,1.851,75.83
+Baseline_E,Cascada_Margen_Simple (|p-0.5|>=0.40),691,100.0,0.0,0.9493,0.9815,0.8325,0.9008,0.8643,0.9305,0.006,0.1675,,1.402,94.65
+Baseline_F1,Cascada_Asimétrica (Política C),691,100.0,0.0,0.9638,0.9826,0.8848,0.9311,0.9028,0.9574,0.006,0.1152,,2.169,67.87
+Baseline_F2_Abstencion,Cascada_Selectiva (Política D),691,96.38,3.62,0.9745,1.0,0.9034,0.9493,0.9235,0.9714,0.0,0.0966,,1.851,75.83

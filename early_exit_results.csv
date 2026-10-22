@@ -1,0 +1,8 @@
+model_id,total_phishing_samples,total_false_negatives,fn_at_stage0_url,fn_at_stage1_network,fn_at_stage2_html,pct_fn_premature_stage0,stops_at_stage0,stops_at_stage1,stops_at_stage2
+B0_M0_Fixed,150,53,53,0,0,100.0,300,0,0
+B1_M1_Fixed,150,25,0,25,0,0.0,0,300,0
+B2_M2_Fixed,150,23,0,0,23,0.0,0,0,300
+B3_Entropy_Cascade,150,29,12,2,15,41.37931034482759,103,69,128
+B4_Conservative,150,29,12,2,15,41.37931034482759,103,69,128
+B5_Simple_Cost,150,39,28,4,7,71.7948717948718,171,96,33
+B6_RAEA_Phish,150,25,3,12,10,12.0,83,127,90

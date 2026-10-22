@@ -1,0 +1,4 @@
+dataset_context,policy_name,total_evaluated,decided_count,abstained_count,coverage_pct,precision_decided,recall_decided,f1_decided,fpr_decided,forced_choice_f1,operational_action
+Host_Unseen_Test (N=691),Cascada_Selectiva_M5,691,666,25,96.38,1.0,0.9034,0.9493,0.0,0.9222,"25 ambiguous cases (18 benign, 7 phish) escalated to SOC analyst review"
+Live_Probe_ITE (N=600),Cascada_Selectiva_M5_Operativa,600,523,77,87.17,0.905,0.8456,0.8743,0.0871,0.8246,"77 network-error / high-entropy cases (41 phish, 36 benign) delegated to human triage"
+SOC_Triage_Workload_Projection,High_Volume_Gateway_Projection,1000000,963800,36200,96.38,1.0,0.9034,0.9493,0.0,0.9222,"Generates 36,200 daily tickets; requires automated fail-safe for small teams"

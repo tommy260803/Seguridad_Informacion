@@ -1,0 +1,7 @@
+comparison,discordant_n10_raea_wins,discordant_n01_comp_wins,total_discordant,raw_p_value,holm_bonferroni_p_value,statistically_significant_005
+B6_RAEA_vs_B0_M0,33,17,50,0.032839137564268484,0.1970348253856109,False
+B6_RAEA_vs_B1_M1,7,7,14,1.0,1.0,False
+B6_RAEA_vs_B2_M2,7,5,12,0.7744140625,1.0,False
+B6_RAEA_vs_B3_Entropy,8,6,14,0.79052734375,1.0,False
+B6_RAEA_vs_B4_Conservative,8,6,14,0.79052734375,1.0,False
+B6_RAEA_vs_B5_SimpleCost,17,11,28,0.34492845088243484,1.0,False

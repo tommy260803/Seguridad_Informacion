@@ -1,0 +1,20 @@
+{
+  "infrastructure": {
+    "c_succ_ms": 1509.1132963855423,
+    "c_fail_ms": 695.8962918918919,
+    "normalized_cost_succ": 0.2,
+    "normalized_cost_fail": 0.8
+  },
+  "content": {
+    "c_succ_ms": 1957.1447677165356,
+    "c_fail_ms": 1005.0452716763006,
+    "normalized_cost_succ": 0.5,
+    "normalized_cost_fail": 1.2
+  },
+  "visual": {
+    "c_succ_ms": 1782.4,
+    "c_fail_ms": 2510.0,
+    "normalized_cost_succ": 1.5,
+    "normalized_cost_fail": 2.5
+  }
+}

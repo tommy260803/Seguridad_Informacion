@@ -1,0 +1,5 @@
+model_tier,n_samples,expected_calibration_error_ece,maximum_calibration_error_mce,brier_score,well_calibrated_ece_under_0_05
+M0_Lexical,691,0.0862,0.3181,0.0636,False
+M1_Infrastructure,691,0.0238,0.5634,0.0361,True
+M2_Content_DOM,691,0.0194,0.4379,0.029,True
+M3_Visual,691,0.0169,0.4654,0.0285,True
