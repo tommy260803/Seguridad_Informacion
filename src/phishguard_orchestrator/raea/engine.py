@@ -107,6 +107,14 @@ def run_raea(
     """
     Ejecuta el ciclo de inferencia adaptativa RAEA-Phish sobre una URL.
     """
+    # Defensa contra uso posicional erróneo: el 4.º parámetro es modality_probabilities.
+    # Un RAEAConfig pasado en esa posición era ignorado silenciosamente y la ejecución
+    # usaba la configuración por defecto (causa raíz de ablaciones idénticas A1-A6).
+    if isinstance(modality_probabilities, RAEAConfig):
+        raise TypeError(
+            "run_raea: se recibió un RAEAConfig en 'modality_probabilities'. "
+            "Use el argumento por nombre config=..."
+        )
     cfg = config or RAEAConfig()
     policy = RiskAvailabilityAwarePolicy(cfg)
     adapter = EvidenceAcquisitionAdapter(offline_data=offline_data)
@@ -202,5 +210,8 @@ def run_raea(
 
         consulted.append(modality_to_acquire)
         acquisition_statuses[modality_to_acquire] = st.value
-        current_p = p_new
+        # Si la modalidad no aporta probabilidad (p. ej. visual sin datos offline),
+        # se conserva la creencia actual en lugar de inventar una nueva.
+        if p_new is not None:
+            current_p = p_new
         step += 1

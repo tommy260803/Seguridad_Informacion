@@ -52,6 +52,7 @@ class RAEAConfig:
     enable_asymmetric_cost: bool = True # Ablation flag: symmetric costs (gamma=1)
     enable_abstention: bool = True    # Ablation flag: disable abstention
     enable_information_value: bool = True # Ablation flag: ignore expected risk reduction
+    constant_availability_rates: Optional[Dict[str, float]] = None # Baseline flag: use constant empirical prior rate
 
 
 @dataclass(frozen=True)

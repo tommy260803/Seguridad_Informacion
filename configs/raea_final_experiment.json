@@ -1,0 +1,50 @@
+{
+  "config_version": "raea-final-verif-1.0",
+  "declared_before_results": "2026-10-22T17:51-05:00 (antes de ejecutar la evaluación final sobre la población PHISHING_WEB). Nota: los resultados de la población original N=300 ya habían sido observados en auditorías anteriores.",
+  "seed": 20261022,
+  "bootstrap_replicates": 5000,
+  "base_costs": {"c_fp": 1.0, "gamma": 15.0, "c_abstain": 0.35, "lambda_cost": 0.25},
+  "cost_scenarios": {
+    "gamma": [1.0, 5.0, 15.0, 30.0],
+    "c_abstain": [0.10, 0.35, 1.00]
+  },
+  "normalized_acquisition_cost": {
+    "network": {"success": 0.20, "failure": 0.80},
+    "html": {"success": 0.50, "failure": 1.20},
+    "note": "Unidades adimensionales; NO son costes económicos. Se aplican idénticamente a todas las políticas según el estado observado de adquisición."
+  },
+  "raea_config": "RAEAConfig() por defecto (gamma=15, c_fp=1, c_abstain=0.35, lambda=0.25, p_safe=0.02, tau_avail_min=0.10, budget=3.0); sin re-ajuste.",
+  "x0_features": "phishguard_ml.features vía scripts/train_and_validate_raea_estimators.extract_features_for_sample (mismas 9 variables que el estimador de disponibilidad) + is_ip_host/is_shortener/is_idn_punycode del manifiesto. in_tranco_top1m se fija a 0 para evitar fuga de la fuente de muestreo de legítimos.",
+  "comparators": {
+    "B0": "M0 fijo, umbral 0.5",
+    "B1": "M1 fijo, umbral 0.5",
+    "B1_bayes": "M1 fijo, umbral de Bayes 1/(1+gamma)=0.0625 (control: efecto de solo cambiar el umbral)",
+    "B2": "M2 completo, umbral 0.5 (todas las filas; y subconjunto complete_case)",
+    "B3": "Cascada original por entropía (h_esc=0.15, h_abst=0.20)",
+    "B4": "Política conservadora existente",
+    "B5": "Política selectiva sencilla: M1 calibrado + regla de Chow con los costes base (phishing si p>=1-c_abst; benigno si p<=c_abst/gamma; si no, abstención). Sin ajuste.",
+    "B5_cov": "M1 con abstención por confianza |p-0.5|; umbral elegido en train_avail para igualar la cobertura de RAEA en train_avail (no usa test).",
+    "B6": "RAEA completo"
+  },
+  "ablations": {
+    "A1": {"enable_availability": false},
+    "A2": {"enable_asymmetric_cost": false},
+    "A3": {"enable_abstention": false},
+    "A4": {"enable_information_value": false},
+    "A5": {"enforce_benign_guard": false},
+    "A6": {}
+  },
+  "populations": {
+    "ORIGINAL_TEST": "test_eval N=300 con etiquetas históricas (se conserva, no se usa para afirmar phishing web)",
+    "PHISHING_WEB_TEST": "test_eval restringido a PHISHING_WEB_VERIFICADO + LEGITIMO_VERIFICADO (población principal)",
+    "PHISHING_WEB_TEST_PHISHTANK_ONLY": "sensibilidad: positivos solo PhishTank verificados",
+    "PHISHING_WEB_TEST_BROAD": "sensibilidad: PHISHING_WEB_VERIFICADO + legítimos con un solo ranking y ausentes de los 3 feeds de amenazas (añadida tras observar que el criterio estricto deja 38 legítimos en test; no usa resultados de políticas)"
+  },
+  "primary_hypotheses": [
+    "H1: riesgo selectivo penalizado (gamma=15, c_abst=0.35) RAEA < B1",
+    "H2: riesgo selectivo penalizado (gamma=15, c_abst=0.35) RAEA < B5",
+    "H3: coste normalizado de adquisición RAEA < B1"
+  ],
+  "multiple_comparison": "Holm sobre H1-H3 (bootstrap pareado, p unilateral por percentil)",
+  "forced_policies": ["fail_open", "fail_closed"]
+}

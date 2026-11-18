@@ -50,15 +50,18 @@ class RiskEstimator:
         """
         Estima el riesgo posterior esperado E[R*(S_t+1)] si se adquiere la modalidad.
         """
-        if not self.config.enable_information_value:
-            return max(0.0, min(1.0, current_p))
-
         gamma = self.config.gamma if self.config.enable_asymmetric_cost else 1.0
         c_fp = self.config.c_fp
         c_fn = gamma * c_fp
         c_abst = self.config.cost_abstain if self.config.enable_abstention else float("inf")
 
         base_risk = current_terminal_risk if current_terminal_risk is not None else min(c_fp * (1.0 - current_p), c_fn * current_p, c_abst)
+
+        if not self.config.enable_information_value:
+            # Ablación A4: sin beneficio informativo esperado, la adquisición no reduce
+            # el riesgo terminal esperado. (Antes se devolvía current_p, una probabilidad
+            # en unidades distintas a las de riesgo: error dimensional.)
+            return float(base_risk)
 
         reduction_factors = {
             "network": 0.25,

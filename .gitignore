@@ -18,9 +18,36 @@ data/cache/
 artifacts/
 sandbox/target-url.txt
 
-# Paquete de evidencia distribuible (se entrega como archivo + SHA-256, no en Git)
-evidencia_phishpe_definitiva.zip
-evidencia_phishpe_definitiva.sha256
-# Entregas de evidencia de fases anteriores (binarios pesados; se conservan en disco)
-evidencia_*.zip
-evidencia_*.sha256
+# Paquete de evidencia distribuible y binarios pesados (se entregan como archivo + SHA-256, no en Git)
+*.zip
+*.zip.sha256
+*.sha256
+*.tar.gz
+
+# Directorios de compilación, empaquetado intermedio y directorios de trabajo temporales
+build_*/
+build_*.docx
+PHISHPE_*/
+non_existent_dir_xyz/
+scratch/*
+!scratch/build_apa7_docx.py
+!scratch/test_flaws_fixed.py
+!scratch/test_improvements.py
+!scratch/verify_differentiating_improvements.py
+!scratch/verify_flaws_fixed.py
+!scratch/verify_improvements.py
+!scratch/verify_second_batch_fixes.py
+
+# Logs y registros de pruebas temporales
+*LOG.txt
+PRUEBAS_Y_REPRODUCCION.txt
+REGISTRO_PRUEBAS_FINAL.txt
+
+# Archivos criptográficos y claves privadas sensibles (Auditoría Seguridad 2026-10)
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.csr
+*.crx

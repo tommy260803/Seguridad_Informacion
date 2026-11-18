@@ -14,18 +14,41 @@ class AvailabilityEstimator:
 
     def __init__(self, model_path: Optional[Path] = None, config: Optional[RAEAConfig] = None):
         self.config = config or RAEAConfig()
-        self.model_path = model_path or Path("artifacts/raea/availability_estimator.joblib")
+        self.model_path = model_path
         self.model_data: Optional[Dict[str, Any]] = None
         self._load_model()
 
     def _load_model(self) -> None:
-        if self.model_path.exists():
-            try:
-                self.model_data = joblib.load(self.model_path)
-            except Exception as e:
-                self.model_data = None
-        else:
-            self.model_data = None
+        candidate_paths = []
+        if self.model_path is not None:
+            candidate_paths.append(Path(self.model_path))
+        
+        here = Path(__file__).resolve()
+        candidate_paths.extend([
+            Path("MODELOS/AVAILABILITY/availability_estimator.joblib"),
+            Path("MODELOS/AVAILABILITY/model.joblib"),
+            Path("artifacts/raea/availability_estimator.joblib"),
+            Path("artifacts/models_reproduced/availability_estimator.joblib"),
+            Path("04_MODELOS/availability/availability_estimator.joblib"),
+            here.parents[2] / "MODELOS" / "AVAILABILITY" / "availability_estimator.joblib",
+            here.parents[3] / "MODELOS" / "AVAILABILITY" / "availability_estimator.joblib",
+            here.parents[4] / "MODELOS" / "AVAILABILITY" / "availability_estimator.joblib",
+            here.parents[2] / "artifacts" / "raea" / "availability_estimator.joblib",
+            here.parents[3] / "artifacts" / "raea" / "availability_estimator.joblib",
+            here.parents[4] / "artifacts" / "raea" / "availability_estimator.joblib",
+            here.parents[2] / "04_MODELOS" / "availability" / "availability_estimator.joblib",
+            here.parents[3] / "04_MODELOS" / "availability" / "availability_estimator.joblib",
+            here.parents[4] / "04_MODELOS" / "availability" / "availability_estimator.joblib",
+        ])
+
+        for p in candidate_paths:
+            if p.exists():
+                try:
+                    self.model_data = joblib.load(p)
+                    self.model_path = p
+                    break
+                except Exception:
+                    continue
 
     def predict_availability(self, modality: str, x0_features: Dict[str, float]) -> float:
         """
@@ -38,6 +61,11 @@ class AvailabilityEstimator:
 
         mod_key = "infra" if modality in ("network", "infrastructure") else "content" if modality in ("html", "content") else "visual"
 
+        # Si se solicita usar la tasa marginal constante empírica (Baseline A_const)
+        if getattr(self.config, "constant_availability_rates", None) is not None:
+            rates = self.config.constant_availability_rates
+            return float(rates.get(mod_key, 0.5))
+
         # Para visual, la disponibilidad depende de que el contenido DOM haya sido exitoso
         if mod_key == "visual":
             p_dom = self.predict_availability("html", x0_features)
@@ -48,7 +76,19 @@ class AvailabilityEstimator:
                 "host_length", "url_length", "host_entropy", "has_ip_host",
                 "uses_https", "p_m0", "dot_count", "host_label_count", "subdomain_count"
             ])
-            vec = np.array([[float(x0_features.get(k, 0.0)) for k in feat_names]])
+            # Valores por defecto para URLs típicas cuando el llamador pasa características parciales
+            feat_defaults = {
+                "host_length": 18.0,
+                "url_length": 45.0,
+                "host_entropy": 3.2,
+                "has_ip_host": 0.0,
+                "uses_https": 1.0,
+                "p_m0": float(x0_features.get("p_m0", 0.5)),
+                "dot_count": 2.0,
+                "host_label_count": 2.0,
+                "subdomain_count": 0.0,
+            }
+            vec = np.array([[float(x0_features.get(k, feat_defaults.get(k, 0.0))) for k in feat_names]])
             model = self.model_data["infra_model"] if mod_key == "infra" else self.model_data["content_model"]
             try:
                 prob = float(model.predict_proba(vec)[0, 1])
@@ -57,20 +97,20 @@ class AvailabilityEstimator:
                 pass
 
         # Heurística analítica de respaldo basada en el análisis empírico
-        # Si tiene host por IP o no usa HTTPS, la probabilidad de caída/bloqueo es alta
+        # Si tiene host por IP o no usa HTTPS, se ajusta la estimación previa sin bloquear la adquisición de red
         has_ip = bool(x0_features.get("has_ip_host", 0.0))
         uses_https = bool(x0_features.get("uses_https", 0.0))
         p0 = float(x0_features.get("p_m0", 0.5))
 
         if mod_key == "infra":
-            base = 0.85 if uses_https else 0.55
+            base = 0.88 if uses_https else 0.72
             if has_ip:
-                base -= 0.35
-            base -= 0.20 * p0
-            return float(max(0.05, min(0.95, base)))
+                base -= 0.15
+            base -= 0.15 * p0
+            return float(max(0.10, min(0.95, base)))
         else: # content
-            base = 0.70 if uses_https else 0.40
+            base = 0.75 if uses_https else 0.50
             if has_ip:
-                base -= 0.30
-            base -= 0.35 * p0
-            return float(max(0.02, min(0.95, base)))
+                base -= 0.20
+            base -= 0.25 * p0
+            return float(max(0.05, min(0.95, base)))
