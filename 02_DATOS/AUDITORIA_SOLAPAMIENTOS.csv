@@ -1,0 +1,6 @@
+set_a,set_b,url_overlap,domain_overlap,leakage_detected
+"samples_train (N=123,341)","samples_val (N=26,430)",0,0,False
+"samples_train (N=123,341)","samples_test (N=26,430)",0,0,False
+"samples_train (N=123,341)",external_cohort (N=240),0,0,False
+probe_train_avail (N=300),probe_test_eval (N=300),0,0,False
+probe_raw (N=600),external_cohort (N=240),0,0,False

@@ -1,0 +1,6 @@
+{
+  "model_name": "M2_Contenido_DOM",
+  "algorithm": "HistGradientBoostingClassifier + CalibratedClassifierCV(isotonic)",
+  "features": 62,
+  "target": "phishing"
+}

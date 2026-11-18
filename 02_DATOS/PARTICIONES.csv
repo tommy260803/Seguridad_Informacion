@@ -1,0 +1,7 @@
+partition,n_samples,pct,description
+train,123341,70.0,Entrenamiento 100% de M0 léxico (Tranco + PhishTank)
+validation,26430,15.0,Validación para calibración isotónica y selección de hiperparámetros
+test,26430,15.0,Test reservado congelado (cero fuga a desarrollo)
+probe_train_avail,300,,Entrenamiento de estimadores de disponibilidad de red y contenido
+probe_test_eval,300,,Evaluación out-of-sample in-distribution de disponibilidad
+external_cohort,240,,Cohorte externa independiente temporalmente desfasada

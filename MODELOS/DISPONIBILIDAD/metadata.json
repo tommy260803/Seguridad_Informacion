@@ -1,0 +1,33 @@
+{
+  "model_type": "LogisticRegression_EmpiricalCalibrated",
+  "target": "modality_availability",
+  "features": [
+    "domain_length",
+    "subdomain_count",
+    "path_depth",
+    "tld_risk",
+    "has_ip"
+  ],
+  "in_sample_auc_network": 0.7415,
+  "in_sample_auc_content": 0.8099,
+  "external_auc_network": 0.6015,
+  "external_brier_network": 0.3033,
+  "external_auc_content": 0.2129,
+  "external_brier_content": 0.4075,
+  "constant_priors": {
+    "network": 0.6833,
+    "content": 0.4267
+  },
+  "prior_constant_brier_network": 0.2668,
+  "prior_constant_brier_content": 0.2462,
+  "divergent_cases_analysis": {
+    "total_external_samples": 240,
+    "identical_decisions_and_cost": 138,
+    "a2_saves_cost_same_decision": 95,
+    "raea_lower_risk": 3,
+    "a2_lower_risk": 3,
+    "other": 1
+  },
+  "scientific_finding": "El estimador logistico entrenado con x0 sufre descalibracion severa bajo cambio de distribucion temporal y geografico (AUC de contenido invertida a 0.2129, Brier 0.4075). Al sobreestimar la probabilidad de que una web este activa, RAEA solicita adquisiciones costosas que fallan. La politica A2 (prior constante empirico pi=[0.683, 0.427]) esta mejor calibrada (Brier 0.2462) y ahorra un 42.6% de coste con decisiones identicas en 95 casos.",
+  "status": "VALIDADO_LIMITACION_DOCUMENTADA"
+}

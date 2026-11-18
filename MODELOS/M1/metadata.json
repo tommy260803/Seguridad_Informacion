@@ -1,0 +1,6 @@
+{
+  "model_name": "M1_Infraestructura",
+  "algorithm": "HistGradientBoostingClassifier + CalibratedClassifierCV(isotonic)",
+  "features": 36,
+  "target": "phishing"
+}

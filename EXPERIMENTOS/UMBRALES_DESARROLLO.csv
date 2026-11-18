@@ -1,0 +1,6 @@
+scenario,target_coverage_dev,frozen_threshold_b5,frozen_threshold_raea,achieved_coverage_b5_dev,achieved_coverage_raea_dev,selection_source
+At_RAEA_Operating_Coverage,0.6949152542372882,0.9175815815815815,0.9525465465465466,0.6949152542372882,0.6949152542372882,Cohorte_Retrospectiva_Desarrollo
+At_Chow_Operating_Coverage,0.4491525423728814,0.9805185185185186,0.996003003003003,0.4491525423728814,0.4491525423728814,Cohorte_Retrospectiva_Desarrollo
+Target_20%,0.2,0.9965025025025025,0.998001001001001,0.19491525423728814,0.4067796610169492,Cohorte_Retrospectiva_Desarrollo
+Target_35%,0.35,0.9895095095095096,0.998001001001001,0.3474576271186441,0.4067796610169492,Cohorte_Retrospectiva_Desarrollo
+Target_50%,0.5,0.9730260260260261,0.991008008008008,0.5,0.5,Cohorte_Retrospectiva_Desarrollo

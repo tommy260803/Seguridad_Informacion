@@ -1,0 +1,4 @@
+availability_policy,availability_estimator_type,coverage,f1_selective,normalized_cost,penalized_risk,brier_content_avail,scientific_assessment
+RAEA_Predictive (B6/A0),Logistic_Regression_x0,0.43333333333333335,0.7522935779816514,0.4925,0.7191666666666667,0.4075,"Sufre descalibración bajo domain shift (Brier 0.4075), sobrestimando disponibilidad y gastando coste en consultas fallidas."
+A2_Constant_Prior,"Constant_Marginal_Rates_pi=[0.683,0.427]",0.4166666666666667,0.7663551401869159,0.29125,0.6,0.2462,Óptima calibración bajo domain shift (Brier 0.2462); evita consultas a contenido caído ahorrando 42.6% de coste con menor riesgo.
+A1_No_Availability,Blind_pi=1.0,0.4041666666666667,0.7216494845360825,0.7283333333333334,0.729375,0.5625,"Ignorancia clásica: asume disponibilidad perfecta, generando explosión de coste (0.7792) al consultar siempre."

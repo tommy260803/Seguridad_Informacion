@@ -1,0 +1,33 @@
+{
+  "captured_at": "2026-10-15T19:32:39.511167Z",
+  "python_version": "3.12.10",
+  "python_implementation": "CPython",
+  "hardware": {
+    "cpu_model": "13th Gen Intel(R) Core(TM) i5-13600K",
+    "cpu_logical_cores": 20,
+    "cpu_physical_cores": 14,
+    "ram_total_gb": 15.78,
+    "ram_available_gb": 1.48,
+    "os_system": "Windows",
+    "os_release": "11",
+    "os_version": "10.0.26200",
+    "machine_arch": "AMD64"
+  },
+  "packages": {
+    "scikit-learn": "1.7.2",
+    "numpy": "2.4.6",
+    "scipy": "1.15.3",
+    "joblib": "1.5.3",
+    "httpx": "0.28.1",
+    "playwright": "1.64.0",
+    "Pillow": "12.3.0",
+    "matplotlib": "3.10.8",
+    "fastapi": "0.141.1",
+    "pydantic": "2.13.5"
+  },
+  "git": {
+    "commit_sha": "058169a78fb50af26bfd3ad9e95e547f782fee1c",
+    "branch": "corrections-phase2",
+    "working_tree_dirty": true
+  }
+}

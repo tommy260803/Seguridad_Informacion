@@ -1,0 +1,4 @@
+cohort,n,network_avail_pct,content_avail_pct,purpose
+RETROSPECTIVA_TRAIN,300,68.33,42.67,Entrenamiento estimadores de disponibilidad
+RETROSPECTIVA_TEST,300,69.0,41.33,Test in-distribution de estimadores de disponibilidad
+EXTERNA,240,54.58,43.75,Evaluación generalización bajo domain-shift real

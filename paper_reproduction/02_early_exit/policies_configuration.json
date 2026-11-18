@@ -1,0 +1,87 @@
+{
+  "metadata": {
+    "protocol": "Early-Exit and Selective Classification Protocol",
+    "validation_split": "host_unseen_validation_N702",
+    "test_split": "host_unseen_test_N691",
+    "selection_criterion": "Maximize F1 subject to HTML acquisition reduction >= 65% and FPR <= 0.0100 on Validation set"
+  },
+  "model_thresholds": {
+    "M0_lexical": 0.382667,
+    "M1_infrastructure": 0.525014,
+    "M2_content_html": 0.394962,
+    "M3_visual": 0.434336
+  },
+  "policies": {
+    "Policy_A": {
+      "name": "M2_Full_Reference",
+      "type": "monolithic",
+      "stages": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "early_exit": false,
+      "terminal_threshold": 0.394962,
+      "abstention": false
+    },
+    "Policy_B": {
+      "name": "Historical_Symmetric_Cascade",
+      "type": "entropy_early_exit",
+      "stages": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "h_esc": 0.15,
+      "early_exit": true,
+      "conservative": false,
+      "terminal_threshold": 0.394962,
+      "abstention": false
+    },
+    "Policy_C": {
+      "name": "Conservative_Cascade",
+      "type": "guarded_early_exit",
+      "stages": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "h_esc": 0.15,
+      "conservative_legit_max_prob": 0.005,
+      "mandatory_m1_unless_ultra_safe": true,
+      "terminal_threshold": 0.394962,
+      "abstention": false
+    },
+    "Policy_D": {
+      "name": "Selective_Classification_Abstention",
+      "type": "selective_cascade",
+      "stages": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "h_esc": 0.15,
+      "h_abs": 0.5,
+      "confidence_threshold": 0.8,
+      "abstention": true,
+      "fallback_mode": "soc_human_review"
+    },
+    "Policy_E": {
+      "name": "Targeted_Verification_Rescue",
+      "type": "experimental_offline",
+      "stages": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "h_esc": 0.15,
+      "rescue_band_m0": [
+        0.005,
+        0.05
+      ],
+      "secondary_verifier": "M1_infrastructure",
+      "terminal_threshold": 0.394962,
+      "abstention": false
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "model_name": "M0_Lexico",
+  "algorithm": "HistGradientBoostingClassifier + CalibratedClassifierCV(isotonic, FrozenEstimator)",
+  "features": 11,
+  "n_train_samples": 123341,
+  "n_train_domains": 92447,
+  "n_cal_samples": 12801,
+  "n_cal_domains": 10263,
+  "n_val_eval_samples": 13629,
+  "n_val_eval_domains": 10264,
+  "domain_leakage_cal_vs_eval": 0,
+  "independent_val_f1": 0.8972,
+  "independent_val_brier": 0.0692,
+  "independent_val_roc_auc": 0.9542,
+  "in_sample_f1_historical_leaked": 0.9024,
+  "correction_note": "Se corrigio la fuga metodologica P1 mediante particion disjunta por dominio entre calibracion y evaluacion",
+  "training_fraction": 1.0,
+  "train_seconds": 1.34
+}

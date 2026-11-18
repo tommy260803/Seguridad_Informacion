@@ -1,0 +1,102 @@
+{
+  "timestamp_utc": "2026-10-15T15:34:29Z",
+  "audit_directory": "D:\\Proyects\\Seguridad_Informacion\\paper_reproduction\\00_audit",
+  "deliverables_complete": true,
+  "missing_deliverables": [],
+  "steps_count": 6,
+  "steps_passed": 6,
+  "steps_failed": 0,
+  "all_passed": true,
+  "results": [
+    {
+      "step": "1. Pruebas Unitarias Pytest",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m pytest tests/ -q",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 10.334,
+      "stdout_tail": [
+        "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\starlette\\testclient.py:53",
+        "  C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\starlette\\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.",
+        "    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]",
+        "",
+        "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html"
+      ],
+      "stderr_tail": []
+    },
+    {
+      "step": "2. Escaneo Preventivo de Secretos",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts/_secret_scan_before_commit.py",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 0.216,
+      "stdout_tail": [
+        "archivos escaneados: 330 (rastreados + no ignorados); no encontrados: 0",
+        "PREEXISTENTE DOCUMENTADO (no bloquea; ver LIMITACIONES_RESTANTES.md):",
+        "  [priv_key] extension.pem -> '-----[KEY_MASKED]-----' | clave de firma de la extensin Chrome, rastreada desde antes de esta fase (ver LIMITACIONES_RESTANTES.md: recomendacin de rotacin/exclusin)",
+        "  [generic_pem_key] extension.pem -> '[KEY_MASKED]' | clave de firma de la extensin Chrome, rastreada desde antes de esta fase (ver LIMITACIONES_RESTANTES.md: recomendacin de rotacin/exclusin)",
+        "sin secretos no documentados"
+      ],
+      "stderr_tail": []
+    },
+    {
+      "step": "3. Revalidación Offline Freeze #5",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts/phase2n_revalidate_offline.py",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 95.979,
+      "stdout_tail": [
+        "  \"n_checks\": 11,",
+        "  \"n_pass\": 11,",
+        "  \"n_fail\": 0,",
+        "  \"dictamen\": \"PASS\"",
+        "}"
+      ],
+      "stderr_tail": []
+    },
+    {
+      "step": "4. Regresiones Manuales Auditadas",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts/phase2g_verify_manual_audit_regressions.py",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 0.047,
+      "stdout_tail": [
+        "    \"abstention_threshold\": 0.2,",
+        "    \"distinct\": true",
+        "  },",
+        "  \"overall_PASS\": true",
+        "}"
+      ],
+      "stderr_tail": []
+    },
+    {
+      "step": "5. Consistencia de Estadísticas Pareadas",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts/phase2e_verify_historical_stats.py",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 0.486,
+      "stdout_tail": [
+        "  \"n_table_mismatch\": 0,",
+        "  \"dictamen\": \"PASS: todas las filas del CSV publicado son reproducibles desde los predictions.csv congelados y las 14 filas de las tablas del informe 07 coinciden con el CSV cannico\"",
+        "}",
+        "  [claim] 07 informe: M2 vs M1 (+0.0127 F1, 9 vs 4 discordantes, p = 0 -> csv={'f1_delta': '0.006299', 'n01': '8', 'n10': '6', 'p_exact': '0.79052734'} recomputed={'f1_delta': 0.006299, 'n01': 8, 'n10': 6, 'p_exact': 0.79052734}",
+        "  [claim] 07 informe: M3 vs M2 (delta F1 = -0.0007, p = 1.0000) -> csv={'f1_delta': '-0.002935', 'p_exact': '1.0'} recomputed={'f1_delta': -0.002935, 'p_exact': 1.0}"
+      ],
+      "stderr_tail": []
+    },
+    {
+      "step": "6. Consistencia Multimodal de Evidencias",
+      "command": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe scripts/verify_audit_report_consistency.py",
+      "returncode": 0,
+      "passed": true,
+      "duration_seconds": 0.078,
+      "stdout_tail": [
+        "  [OK] Found in report: Extension hybrid with Tranco F1 rounded -> '0.8798'",
+        "  [OK] Found in report: Extension hybrid with Tranco FPR (0.0000) -> '0.0000'",
+        "",
+        "================ VERIFICATION SUMMARY ================",
+        "SUCCESS: 100% of verified figures, sample counts, metrics, latencies, and hardware match disk evidence!"
+      ],
+      "stderr_tail": []
+    }
+  ]
+}

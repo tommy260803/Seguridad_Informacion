@@ -1,0 +1,26 @@
+{
+  "commit_base": "2910b6a4495c5068761af40f08efceaf123a4b08",
+  "config_version": "raea-final-verif-1.0",
+  "b5_cov": {
+    "_orig": {
+      "threshold_conf": 0.8718992,
+      "train_coverage_target": 0.7333333333333333
+    },
+    "_pw": {
+      "threshold_conf": 0.8225262678571428,
+      "train_coverage_target": 0.7767857142857143
+    },
+    "_broad": {
+      "threshold_conf": 0.8963697321428572,
+      "train_coverage_target": 0.7053571428571429
+    }
+  },
+  "inputs_sha256": {
+    "artifacts/raea/raea_partitions.csv": "ce54526b7295723d13dcacc4242bf4ba2d1f1f73a45e04b8df02192947b54814",
+    "artifacts/corrections_phase2/eval/probe_predictions.csv": "77f69d03f04513fd08d561f51042c9ba6c4254178bfb962bc972c3c43c0908da",
+    "artifacts/corrections_phase2/cohort2/cohort2_dataset.csv": "bb8f6284a6779a98cb4a3bec65eaac86f15dfa196713358129535bd131e32f73",
+    "artifacts/raea/availability_estimator.joblib": "0e029aeed8ebbb6ac5b2829a593a19e943cf7f88428559aae68091cfad32df59",
+    "artifacts/raea_final/DATOS_Y_ETIQUETAS.csv": "cc29f9b0e20f7aa56edb805f9cc8b9b17eda39bf9bf442a2809c5b34e41ab114",
+    "configs/raea_final_experiment.json": "28abd43a768e3c5cd136cf069846ebbfe319a51670e18f328632ab1ed25b6073"
+  }
+}

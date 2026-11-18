@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-10-23T18:13:55Z",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python_version": "3.12.10",
+    "cpu_count": 20
+  },
+  "models": {
+    "M0": {
+      "features": [
+        "host_length",
+        "registered_domain_length",
+        "host_label_count",
+        "subdomain_count",
+        "host_digit_count",
+        "host_digit_ratio",
+        "host_hyphen_count",
+        "host_entropy",
+        "has_ip_host",
+        "has_punycode",
+        "tld_length"
+      ],
+      "n_features": 11,
+      "train_seconds": 2.379931926727295,
+      "artifact": "C:\\non_existent_fake_root_xyz\\subdir\\artifacts\\models_reproduced\\m0_reproduced.joblib",
+      "sha256": "b47fc1d7fbd2d6fd88a6b6c034288e0fed0aea44918adcf1185dee296cf39aa3"
+    },
+    "Availability": {
+      "features": [
+        "host_length",
+        "url_length",
+        "host_entropy",
+        "has_ip_host",
+        "uses_https",
+        "p_m0",
+        "dot_count",
+        "host_label_count",
+        "subdomain_count"
+      ],
+      "n_features": 9,
+      "train_samples": 300,
+      "val_samples": 300,
+      "artifact": "C:\\non_existent_fake_root_xyz\\subdir\\artifacts\\models_reproduced\\availability_reproduced.joblib",
+      "sha256": "3e6a8108ce155aeeb3f9ceef9b9816cba14f618cadbc65703f37720870ba45b0",
+      "auc_infra": 0.7415079365079366,
+      "brier_infra": 0.18762456979872275,
+      "brier_const_infra": 0.21027777777777779,
+      "auc_content": 0.8098887064404305,
+      "brier_content": 0.16565501102248825,
+      "brier_const_content": 0.24364444444444444,
+      "prior_rates": {
+        "infra": 0.6833333333333333,
+        "content": 0.4266666666666667
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "system": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "platform": "AMD64",
+    "python_version": "3.12.10"
+  },
+  "dependencies": {
+    "numpy": ">=1.26.0",
+    "scipy": ">=1.12.0",
+    "pandas": ">=2.1.0",
+    "matplotlib": ">=3.8.0",
+    "pytest": ">=8.0.0"
+  },
+  "parameters": {
+    "gamma_fn_fp": 15.0,
+    "c_abst": 0.35,
+    "c_fp": 1.0,
+    "p_safe": 0.02,
+    "primary_population": "PHISHING_WEB_TEST",
+    "primary_n": 118,
+    "primary_pos": 80,
+    "primary_neg": 38,
+    "bootstrap_replicates": 5000,
+    "seed": 42
+  }
+}
